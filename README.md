@@ -60,3 +60,30 @@ Profiler med minst två aktörer får nu en jämförelsevy för observerad aktiv
 
 ## v2.1 Strategic Moves
 Bevakly kan nu kombinera separata aktörshändelser till försiktigt formulerade strategiska hypoteser. Varje hypotes visar stöd, källbredd, motbevis och vad som bör bevakas härnäst. Funktionen beskriver observerade mönster och får inte presentera dem som verifierad företagsstrategi.
+
+## Automatisk insamling (v2.3.0)
+
+Vercel kör `/api/source-preview` automatiskt en gång per dygn via `vercel.json`. Körningen hämtar källor, analyserar träffar och sparar historiken i Neon. På Vercel Hobby är cron begränsad till daglig körning, därför är standarden 05:30 UTC. Manuell körning av endpointen behövs bara vid felsökning eller om du uttryckligen vill tvinga fram en extra insamling.
+
+
+## v2.5.0 – Förklaringslager
+Varje händelse i Branschflödet får nu en enkel, deterministisk förklaring av varför den kan vara viktig och vad användaren bör bevaka härnäst. Förklaringen hålls separat från fakta från källan och anger när signalen fortfarande är preliminär.
+
+## v2.6.0 — Viktigast just nu
+Branschflödet kan nu gruppera flera närliggande träffar till en försiktig story-klusterinsikt. Syftet är färre upprepningar och tydligare källstöd, utan att påstå att två artiklar är samma händelse när detta inte kan beläggas.
+
+
+## v2.7.0 — Vad är faktiskt nytt?
+Bevakly jämför nya händelser med liknande äldre rapportering och försöker skilja en ny artikel från en verklig ny utveckling eller konkret ny detalj.
+
+
+## v2.8.0
+Branschflödet innehåller nu **Utveckling över tid**, som försiktigt kopplar ihop återkommande signaler till strategiska tidslinjer.
+
+
+## v2.10.0 – Daily Flow
+Läst-status per bevakningsprofil, oläst-först, markera vy som läst och tydligt “Du är ikapp” för snabb daglig användning.
+
+
+## v2.11.0 Source Network Expansion
+Avfallsprofilen använder nu 19 bevakade källingångar. Nya ingångar breddar bevakningen mot energi/priser, officiell statistik, VA/slam och EU:s cirkulära ekonomi. Flera sidor från samma domän behandlas inte som oberoende bekräftelse.

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronRight, Filter, Radar, Search, Sparkles, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, Radar, Search, Sparkles, TrendingUp } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
-import EventCard from "@/components/EventCard";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import IndustryFeed from "@/components/IndustryFeed";
 import WatchProfiles from "@/components/WatchProfiles";
@@ -13,14 +12,12 @@ import CompetitorIntelligence from "@/components/CompetitorIntelligence";
 import ActorWatchlist from "@/components/ActorWatchlist";
 import ActorComparison from "@/components/ActorComparison";
 import StrategicMoves from "@/components/StrategicMoves";
-import { competitors, events } from "@/lib/demo-data";
 
 export default function Home() {
   const [selection,setSelection]=useState<OnboardingSelection|null>(null);
   const [profiles,setProfiles]=useState<WatchProfile[]>([]);
   const [activeProfileId,setActiveProfileId]=useState('');
   const [ready,setReady]=useState(false);
-  const sortedEvents = useMemo(() => [...events].sort((a,b)=>b.score-a.score), []);
 
   useEffect(()=>{
     try{
@@ -42,37 +39,32 @@ export default function Home() {
 
   return <div className="appShell">
     <Sidebar />
-    <main className="main">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING</p><h1>Vad behöver jag veta?</h1><p>Bevakly prioriterar förändringar som kan påverka marknaden – inte mängden nyheter.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
+    <main className="main" id="top">
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.10.0</p><h1>Det viktigaste först.</h1><p>På en minut ska du förstå vad som har förändrats, varför det spelar roll och vad som är värt att följa.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
-      <WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/>
+      <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
       <section className="statusStrip">
         <div><span className="statusIcon"><Radar size={18}/></span><p><strong>{activeProfile.name}</strong><span>{activeProfile.market} · {activeProfile.themes.slice(0,2).join(' · ')||'bred bevakning'}</span></p></div>
-        <div><span className="statusIcon"><TrendingUp size={18}/></span><p><strong>Strategisk intelligence</strong><span>impact · trender · svaga signaler · blind spots</span></p></div>
-        <div><span className="statusIcon"><Sparkles size={18}/></span><p><strong>Tydlig produktgräns</strong><span>Bevakly ≠ Anbudify</span></p></div>
+        <div><span className="statusIcon"><TrendingUp size={18}/></span><p><strong>Automatisk bevakning</strong><span>riktiga källor · uppdateras dagligen</span></p></div>
+        <div><span className="statusIcon"><Sparkles size={18}/></span><p><strong>Färre, bättre insikter</strong><span>viktigt först · detaljer vid behov</span></p></div>
       </section>
 
-      <IndustryFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} />
-      <ExecutiveIntelligence industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} />
-      {activeProfile.actors.length>0&&<ActorWatchlist actors={activeProfile.actors} />}
-      {activeProfile.actors.length>1&&<ActorComparison actors={activeProfile.actors} />}
-      {activeProfile.actors.length>0&&<StrategicMoves actors={activeProfile.actors} />}
-      {activeProfile.industry==="waste"&&<CompetitorIntelligence />}
+      <div id="industry-feed" className="navAnchor"><IndustryFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} /></div>
+      <details className="analysisDrawer" id="signals">
+        <summary><span><strong>Visa analysen bakom</strong><small>Trender, svaga signaler, motbevis och andra fördjupningar.</small></span><span className="analysisDrawerAction">Fördjupa</span></summary>
+        <div className="analysisDrawerBody"><ExecutiveIntelligence industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} /></div>
+      </details>
 
-      {activeProfile.industry==="waste"&&<div className="contentGrid">
-        <section>
-          <div className="sectionHeader"><div><p className="eyebrow">DEMOUNDERLAG · AVFALL</p><h2>Exempel på prioriterade händelser</h2></div><button className="filterButton"><Filter size={16}/> Filter</button></div>
-          <div className="demoNotice"><strong>Demo/testdata</strong><span>Detta exempelunderlag visas bara för avfallsprofilen. Branschflödet ovan är den riktiga källvyn.</span></div>
-          <div className="eventList">{sortedEvents.map(e=><EventCard event={e} key={e.id}/>)}</div>
-        </section>
-        <aside className="rightRail">
-          <section className="panel"><div className="panelTitle"><div><p className="eyebrow">KONKURRENTER · DEMO</p><h3>Mest aktiva</h3></div><button><ChevronRight size={18}/></button></div>
-            <div className="competitorList">{competitors.map((c,i)=><div className="competitorRow" key={c.id}><span className="rank">{i+1}</span><div><strong>{c.name}</strong><span>{c.latestSignal}</span></div><div className="activity"><strong>{c.activityScore}</strong><span>aktivitet</span></div></div>)}</div>
-          </section>
-          <section className="panel"><p className="eyebrow">BEVAKLY PRINCIP</p><h3>Färre, bättre insikter</h3><p className="smallText">Bevakly ska hellre visa fem belagda förändringar än femtio lösa träffar. Upphandlingsarbete, kvalificering och anbudsprocess hör hemma i Anbudify.</p></section>
-        </aside>
-      </div>}
+      {activeProfile.actors.length>0&&<details className="analysisDrawer" id="actors">
+        <summary><span><strong>Konkurrenter</strong><small>Aktivitet, jämförelser och utveckling för aktörerna du bevakar.</small></span><span className="analysisDrawerAction">Öppna</span></summary>
+        <div className="analysisDrawerBody"><ActorWatchlist actors={activeProfile.actors} />{activeProfile.actors.length>1&&<ActorComparison actors={activeProfile.actors} />}{activeProfile.industry==="waste"&&<CompetitorIntelligence />}</div>
+      </details>}
+
+      {activeProfile.actors.length>0&&<details className="analysisDrawer" id="strategic-moves">
+        <summary><span><strong>Strategiska drag</strong><small>Försiktiga hypoteser om större förflyttningar – med stöd och motbevis.</small></span><span className="analysisDrawerAction">Öppna</span></summary>
+        <div className="analysisDrawerBody"><StrategicMoves actors={activeProfile.actors} /></div>
+      </details>}
     </main>
   </div>;
 }
