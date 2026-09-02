@@ -25,8 +25,9 @@ Bevakly analyserar omvärlden. Upphandlings- och anbudsarbetet hör hemma i Anbu
 ## Avfalls-taxonomi v1
 Insamling & logistik; Sortering & materialåtervinning; Matavfall & biologisk behandling; Energiåtervinning; Farligt avfall; Cirkularitet & återbruk; Regelverk & producentansvar; Klimat & fossilfri drift; Digitalisering & data; Kapacitet & infrastruktur; Kostnad & marknadsekonomi; Förvärv & konsolidering.
 
-## Supabase / historik
-Historikfunktionerna aktiveras när `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` och `BEVAKLY_ORGANIZATION_ID` finns server-side. Service role key får aldrig exponeras i klientkod.
+## Neon / historik
+
+Bevakly v2.2.0 använder Neon/PostgreSQL för server-side historik. Lägg den poolade anslutningssträngen i `DATABASE_URL` och kör `bevakly-neon-schema.sql` i Bevakly-projektets `neondb`. `BEVAKLY_ORGANIZATION_ID` är valfri; om den saknas används den seedade standardorganisationen.
 
 ## v1.3 – Branschflöde och multi-industry
 Bevakly kan nu startas med olika branschprofiler. Branschflödet visar daterade relevanta nyheter för de senaste 24 timmarna, 3, 7 eller 30 dagarna och filtrerar på nyhetskategori. Avfall & återvinning har fortsatt den mest detaljerade intelligence-modellen; övriga profiler använder en generell modell tills deras taxonomier fördjupas.

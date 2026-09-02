@@ -15,7 +15,7 @@ export default function LiveSourcePreview(){
   {error&&<div className="sourceError">Källmotorn svarade inte: {error}</div>}
   {data&&<><div className="sourceStats"><span><strong>{data.totalRawHits}</strong> råträffar</span><span><strong>{data.totalClusters}</strong> händelser</span><span><ShieldCheck size={14}/>{data.sourceStatus.filter(s=>s.ok).length}/{data.sourceStatus.length} källor svarade</span></div>
   <div className="sourceHealth">{data.sourceStatus.map(s=><span key={s.id} className={s.ok?"sourceOk":"sourceBad"}>{s.name}: {s.ok?`${s.hits} träffar`:"fel"}</span>)}</div>
-  {data.persistence&&<p className="historyStatus">{data.persistence.enabled?`Historik: ${data.persistence.saved} händelser sparade i Supabase.`:`Historik avstängd: ${data.persistence.reason??"ej konfigurerad"}`}</p>}
+  {data.persistence&&<p className="historyStatus">{data.persistence.enabled?`Historik: ${data.persistence.saved} händelser sparade i Neon.`:`Historik avstängd: ${data.persistence.reason??"ej konfigurerad"}`}</p>}
   <div className="liveList">{data.items.length?data.items.map(item=><article className="liveItem" key={`${item.source}-${item.url}`}>
    <div className="eventTopline"><span className={`score score-${item.score>=75?"high":"normal"}`}>{item.score}</span><span className="importance">{item.importance}</span><span className="category">{item.signalType==="procurement"?"Upphandling":item.assessment?.category??"Källgrundad"}</span><span className="liveBadge">LIVE</span></div>
    <h3>{item.title}</h3><div className="eventMeta"><span>{item.source}</span><span>•</span><span>{item.sourceCount} {item.sourceCount===1?"källa":"liknande träffar"}</span></div>

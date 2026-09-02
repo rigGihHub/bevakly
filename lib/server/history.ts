@@ -1,52 +1,93 @@
-import { createClient } from "@supabase/supabase-js";
-import type { HistoricalEvent } from "@/lib/intelligence/signals";
+import type { HistoricalEvent, StrategicSignal } from "@/lib/intelligence/signals";
+import { databaseErrorMessage, ensureOrganization, getDatabase, getOrganizationId } from "@/lib/server/db";
 
 export async function loadHistoricalEvents(days = 120): Promise<{enabled:boolean;events:HistoricalEvent[];reason:string|null}> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const organizationId = process.env.BEVAKLY_ORGANIZATION_ID;
-  if (!url || !serviceKey || !organizationId) return {enabled:false,events:[],reason:"Supabase-historik är inte konfigurerad."};
+  const sql = getDatabase();
+  if (!sql) return {enabled:false,events:[],reason:"Databashistorik är inte konfigurerad. DATABASE_URL saknas."};
 
-  const db = createClient(url, serviceKey, {auth:{persistSession:false,autoRefreshToken:false}});
+  const organizationId = getOrganizationId();
   const since = new Date(Date.now() - days * 86400000).toISOString();
-  const {data,error} = await db
-    .from("events")
-    .select("id,title,category,geography,published_at,relevance_score,canonical_url,event_competitors(competitors(name))")
-    .eq("organization_id", organizationId)
-    .gte("published_at", since)
-    .order("published_at", {ascending:false})
-    .limit(500);
+  try {
+    const rows = await sql`
+      select
+        e.id::text as id,
+        e.title,
+        e.category,
+        e.geography,
+        e.published_at,
+        e.relevance_score,
+        e.canonical_url,
+        coalesce(
+          jsonb_agg(distinct c.name) filter (where c.name is not null),
+          '[]'::jsonb
+        ) as competitors
+      from events e
+      left join event_competitors ec on ec.event_id = e.id
+      left join competitors c on c.id = ec.competitor_id
+      where e.organization_id = ${organizationId}::uuid
+        and e.published_at >= ${since}::timestamptz
+      group by e.id
+      order by e.published_at desc nulls last
+      limit 500
+    `;
 
-  if (error) return {enabled:true,events:[],reason:error.message};
-
-  const events: HistoricalEvent[] = (data ?? []).map((row:any) => ({
-    id: row.id,
-    title: row.title,
-    category: row.category,
-    geography: row.geography,
-    publishedAt: row.published_at,
-    relevanceScore: row.relevance_score,
-    sourceUrl: row.canonical_url,
-    competitors: (row.event_competitors ?? []).map((link:any) => link?.competitors?.name).filter(Boolean),
-  }));
-  return {enabled:true,events,reason:null};
+    const events: HistoricalEvent[] = rows.map((row:any) => ({
+      id: String(row.id),
+      title: row.title,
+      category: row.category,
+      geography: row.geography,
+      publishedAt: row.published_at ? new Date(row.published_at).toISOString() : null,
+      relevanceScore: row.relevance_score,
+      sourceUrl: row.canonical_url,
+      competitors: Array.isArray(row.competitors) ? row.competitors.filter(Boolean) : [],
+    }));
+    return {enabled:true,events,reason:null};
+  } catch (error) {
+    return {enabled:true,events:[],reason:databaseErrorMessage(error)};
+  }
 }
 
-export async function persistStrategicSignals(signals: import("@/lib/intelligence/signals").StrategicSignal[]) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const organizationId = process.env.BEVAKLY_ORGANIZATION_ID;
-  if (!url || !serviceKey || !organizationId || signals.length === 0) return {enabled:Boolean(url&&serviceKey&&organizationId),saved:0};
-  const db = createClient(url, serviceKey, {auth:{persistSession:false,autoRefreshToken:false}});
-  let saved = 0;
-  for (const signal of signals) {
-    const {error} = await db.from("strategic_signals").upsert({
-      organization_id:organizationId,signal_key:signal.id,title:signal.title,summary:signal.summary,rationale:signal.rationale,
-      confidence:signal.confidence,severity:signal.severity,event_count:signal.eventCount,event_ids:signal.eventIds,
-      categories:signal.categories,competitors:signal.competitors,geographies:signal.geographies,first_seen:signal.firstSeen,last_seen:signal.lastSeen,
-      hypothesis:true,generated_at:new Date().toISOString(),
-    },{onConflict:"organization_id,signal_key"});
-    if (!error) saved++;
+export async function persistStrategicSignals(signals: StrategicSignal[]) {
+  if (!getDatabase()) return {enabled:false,saved:0,reason:"DATABASE_URL saknas."};
+  if (signals.length === 0) return {enabled:true,saved:0,reason:null};
+
+  try {
+    const { sql, organizationId } = await ensureOrganization();
+    if (!sql) return {enabled:false,saved:0,reason:"DATABASE_URL saknas."};
+    let saved = 0;
+    for (const signal of signals) {
+      await sql`
+        insert into strategic_signals (
+          organization_id, signal_key, title, summary, rationale, confidence, severity,
+          event_count, event_ids, categories, competitors, geographies, first_seen, last_seen,
+          hypothesis, generated_at
+        ) values (
+          ${organizationId}::uuid, ${signal.id}, ${signal.title}, ${signal.summary}, ${signal.rationale},
+          ${signal.confidence}, ${signal.severity}, ${signal.eventCount}, ${JSON.stringify(signal.eventIds)}::jsonb,
+          ${JSON.stringify(signal.categories)}::jsonb, ${JSON.stringify(signal.competitors)}::jsonb,
+          ${JSON.stringify(signal.geographies)}::jsonb, ${signal.firstSeen}::timestamptz,
+          ${signal.lastSeen}::timestamptz, true, now()
+        )
+        on conflict (organization_id, signal_key) do update set
+          title = excluded.title,
+          summary = excluded.summary,
+          rationale = excluded.rationale,
+          confidence = excluded.confidence,
+          severity = excluded.severity,
+          event_count = excluded.event_count,
+          event_ids = excluded.event_ids,
+          categories = excluded.categories,
+          competitors = excluded.competitors,
+          geographies = excluded.geographies,
+          first_seen = excluded.first_seen,
+          last_seen = excluded.last_seen,
+          hypothesis = true,
+          generated_at = now()
+      `;
+      saved++;
+    }
+    return {enabled:true,saved,reason:null};
+  } catch (error) {
+    return {enabled:true,saved:0,reason:databaseErrorMessage(error)};
   }
-  return {enabled:true,saved};
 }

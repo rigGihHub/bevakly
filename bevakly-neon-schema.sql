@@ -1,5 +1,5 @@
--- LEGACY: Supabase schema retained for release history. Bevakly v2.2.0 uses bevakly-neon-schema.sql.
--- Bevakly v0.1 draft schema. Run in a dedicated Bevakly Supabase project.
+-- Bevakly v2.2.0 - Neon/PostgreSQL schema
+-- Run against the Bevakly Neon project (database: neondb).
 create extension if not exists pgcrypto;
 
 create table if not exists organizations (
@@ -10,12 +10,9 @@ create table if not exists organizations (
   created_at timestamptz not null default now()
 );
 
-create table if not exists organization_members (
-  organization_id uuid not null references organizations(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  role text not null default 'member' check (role in ('owner','admin','member')),
-  primary key (organization_id,user_id)
-);
+insert into organizations (id,name,industry,geography)
+values ('11111111-1111-4111-8111-111111111111','Bevakly','Avfall & återvinning','{}'::jsonb)
+on conflict (id) do nothing;
 
 create table if not exists competitors (
   id uuid primary key default gen_random_uuid(),
@@ -26,7 +23,8 @@ create table if not exists competitors (
   aliases text[] not null default '{}',
   priority smallint not null default 2 check (priority between 1 and 3),
   metadata jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (organization_id,name)
 );
 
 create table if not exists monitoring_topics (
@@ -72,8 +70,12 @@ create table if not exists events (
   ai_interpretation text,
   ai_hypothesis boolean not null default false,
   verification_status text not null default 'unverified' check (verification_status in ('verified','partially_verified','unverified')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (organization_id,canonical_url)
 );
+
+create index if not exists events_org_published_idx on events (organization_id,published_at desc);
+create index if not exists events_org_category_idx on events (organization_id,category);
 
 create table if not exists event_sources (
   event_id uuid not null references events(id) on delete cascade,
@@ -89,44 +91,6 @@ create table if not exists event_competitors (
   primary key(event_id,competitor_id)
 );
 
-create table if not exists user_feedback (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null references organizations(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  event_id uuid not null references events(id) on delete cascade,
-  feedback text not null check (feedback in ('important','relevant','irrelevant','saved')),
-  created_at timestamptz not null default now()
-);
-
-alter table organizations enable row level security;
-alter table organization_members enable row level security;
-alter table competitors enable row level security;
-alter table monitoring_topics enable row level security;
-alter table events enable row level security;
-alter table user_feedback enable row level security;
-
-create or replace function is_org_member(target_org uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from organization_members m
-    where m.organization_id = target_org and m.user_id = auth.uid()
-  );
-$$;
-
-create policy "members read organizations" on organizations for select using (is_org_member(id));
-create policy "members read competitors" on competitors for select using (is_org_member(organization_id));
-create policy "members read topics" on monitoring_topics for select using (is_org_member(organization_id));
-create policy "members read events" on events for select using (is_org_member(organization_id));
-create policy "members manage feedback" on user_feedback for all using (is_org_member(organization_id)) with check (is_org_member(organization_id) and user_id = auth.uid());
-
-
--- v0.4 migrations for existing Bevakly databases
-alter table sources add column if not exists source_key text;
-create unique index if not exists sources_source_key_uq on sources(source_key) where source_key is not null;
-alter table events add column if not exists canonical_url text;
-create unique index if not exists events_org_canonical_url_uq on events(organization_id, canonical_url) where canonical_url is not null;
-
--- v0.6: persisted strategic signals. Generated signals are hypotheses and must never be treated as verified facts.
 create table if not exists strategic_signals (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references organizations(id) on delete cascade,
@@ -137,15 +101,15 @@ create table if not exists strategic_signals (
   confidence text not null check (confidence in ('hög','medel','låg')),
   severity text not null check (severity in ('hög','medel','låg')),
   event_count integer not null default 0,
-  event_ids uuid[] not null default '{}',
-  categories text[] not null default '{}',
-  competitors text[] not null default '{}',
-  geographies text[] not null default '{}',
+  event_ids jsonb not null default '[]'::jsonb,
+  categories jsonb not null default '[]'::jsonb,
+  competitors jsonb not null default '[]'::jsonb,
+  geographies jsonb not null default '[]'::jsonb,
   first_seen timestamptz,
   last_seen timestamptz,
   hypothesis boolean not null default true,
   generated_at timestamptz not null default now(),
-  unique(organization_id, signal_key)
+  unique(organization_id,signal_key)
 );
-alter table strategic_signals enable row level security;
-create policy "members read strategic signals" on strategic_signals for select using (is_org_member(organization_id));
+
+create index if not exists strategic_signals_org_generated_idx on strategic_signals (organization_id,generated_at desc);
