@@ -1,0 +1,19 @@
+"use client";
+import { useMemo,useState } from "react";
+import { ArrowRight, Check, MapPin, Target, Users } from "lucide-react";
+import { industryProfiles } from "@/lib/intelligence/industries";
+
+export type OnboardingSelection={industry:string;customIndustry:string;competitors:string[];market:string;regions:string};
+export default function Onboarding({ onDone }: { onDone: (selection:OnboardingSelection) => void }) {
+  const [step,setStep]=useState(1); const [industry,setIndustry]=useState('waste'); const [customIndustry,setCustomIndustry]=useState(''); const [market,setMarket]=useState('Sverige'); const [regions,setRegions]=useState('Örebro län, Värmlands län, Västmanlands län, Södermanlands län');
+  const profile=useMemo(()=>industryProfiles.find(x=>x.id===industry)??industryProfiles[0],[industry]);
+  const [selected,setSelected]=useState(["PreZero","Ragn-Sells","Stena Recycling"]); const competitors=profile.suggestedCompetitors.length?profile.suggestedCompetitors:["Lägg till senare i Inställningar"];
+  const finish=()=>onDone({industry,customIndustry,competitors:selected,market,regions});
+  return <main className="onboardingShell"><section className="onboardingCard">
+    <div className="onboardingBrand"><span className="brandMark">B</span><span>Bevakly</span></div><div className="steps"><span className={step>=1?"done":""}>1</span><i/><span className={step>=2?"done":""}>2</span><i/><span className={step>=3?"done":""}>3</span></div>
+    {step===1&&<div className="onboardingContent"><Target size={30}/><p className="eyebrow">STEG 1 AV 3</p><h1>Vilken bransch ska Bevakly förstå?</h1><p>Branschvalet styr nyckelord, temakarta, källpaket och vilka förändringar som bedöms relevanta.</p><label>Bransch<select value={industry} onChange={e=>{setIndustry(e.target.value);setSelected([])}}>{industryProfiles.map(x=><option value={x.id} key={x.id}>{x.label}</option>)}</select></label>{industry==='custom'&&<label>Din bransch<input value={customIndustry} onChange={e=>setCustomIndustry(e.target.value)} placeholder="Exempel: Städ- och facility management"/></label>}<p className="industryHint">{profile.description}</p><div className="topicGrid">{profile.themes.slice(0,8).map(x=><button className="topic selected" key={x}><Check size={14}/>{x}</button>)}</div></div>}
+    {step===2&&<div className="onboardingContent"><MapPin size={30}/><p className="eyebrow">STEG 2 AV 3</p><h1>Var är ni verksamma?</h1><p>Geografisk relevans påverkar vad som prioriteras.</p><label>Huvudmarknad<select value={market} onChange={e=>setMarket(e.target.value)}><option>Sverige</option><option>Norden</option><option>Europa</option><option>Globalt</option></select></label><label>Prioriterade områden<input value={regions} onChange={e=>setRegions(e.target.value)}/></label></div>}
+    {step===3&&<div className="onboardingContent"><Users size={30}/><p className="eyebrow">STEG 3 AV 3</p><h1>Vilka konkurrenter är viktigast?</h1><p>Förslag visas där Bevakly har ett färdigt branschpaket. Fler kan läggas till senare.</p><div className="competitorSelect">{competitors.map(name=>{const placeholder=name.startsWith('Lägg till');const active=selected.includes(name);return <button disabled={placeholder} key={name} className={active?"competitorOption selected":"competitorOption"} onClick={()=>!placeholder&&setSelected(active?selected.filter(x=>x!==name):[...selected,name])}><span>{name}</span>{active&&<Check size={16}/>}</button>})}</div></div>}
+    <div className="onboardingFooter"><button className="linkButton" onClick={()=>step>1&&setStep(step-1)} disabled={step===1}>Tillbaka</button><button className="primaryButton big" onClick={()=>step<3?setStep(step+1):finish()} disabled={step===1&&industry==='custom'&&!customIndustry.trim()}>{step<3?"Fortsätt":"Starta min bevakning"}<ArrowRight size={17}/></button></div>
+  </section></main>;
+}
