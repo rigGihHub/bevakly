@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "2.11.1",
+  "version": "2.25.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

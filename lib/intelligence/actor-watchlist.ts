@@ -1,4 +1,6 @@
 import type { HistoricalEvent } from "@/lib/intelligence/signals";
+import { buildCompetitorTrail, type CompetitorTrail } from "@/lib/intelligence/competitor-trail";
+import { buildCompetitorChangePicture, type CompetitorChangePicture } from "@/lib/intelligence/competitor-change-picture";
 
 export type ActorThemeShift = {
   theme: string;
@@ -23,6 +25,8 @@ export type ActorWatch = {
   interpretation: string;
   watchNext: string[];
   timeline: HistoricalEvent[];
+  trail: CompetitorTrail;
+  changePicture: CompetitorChangePicture;
 };
 
 function ageDays(value: string | null, now: Date){
@@ -87,7 +91,8 @@ export function buildActorWatchlist(events:HistoricalEvent[], requestedActors:st
       name,eventCount30d:current30,eventCount90d:rows.length,averageScore:scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0,momentum,latestEventAt:rows[0]?.publishedAt??null,
       independentSourceDomains:domains.length,categories,geographies:topCounts(rows.flatMap(e=>e.geography?e.geography.split(',').map(x=>x.trim()).filter(Boolean):[])),themeShifts,
       headline: current30?`${current30} observerade händelser senaste 30 dagarna`:'Ingen daterad händelse senaste 30 dagarna',
-      interpretation:actorInterpretation(name,rows,themeShifts),watchNext:watchNext(themeShifts,categories.map(x=>x.name)),timeline:rows.slice(0,14)
+      interpretation:actorInterpretation(name,rows,themeShifts),watchNext:watchNext(themeShifts,categories.map(x=>x.name)),timeline:rows.slice(0,14),
+      trail:buildCompetitorTrail(name,events,now),changePicture:buildCompetitorChangePicture(name,events,now)
     };
   }).filter(x=>requestedActors.length?requestedActors.some(a=>a.toLocaleLowerCase('sv-SE')===x.name.toLocaleLowerCase('sv-SE')):x.eventCount90d>0)
     .sort((a,b)=>b.eventCount30d-a.eventCount30d||b.eventCount90d-a.eventCount90d||b.averageScore-a.averageScore);

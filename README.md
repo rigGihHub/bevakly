@@ -86,4 +86,14 @@ Läst-status per bevakningsprofil, oläst-först, markera vy som läst och tydli
 
 
 ## v2.11.0 Source Network Expansion
-Avfallsprofilen använder nu 19 bevakade källingångar. Nya ingångar breddar bevakningen mot energi/priser, officiell statistik, VA/slam och EU:s cirkulära ekonomi. Flera sidor från samma domän behandlas inte som oberoende bekräftelse.
+Avfallsprofilen använder nu 31 bevakade källingångar. Nya ingångar breddar bevakningen mot energi/priser, officiell statistik, VA/slam och EU:s cirkulära ekonomi. Flera sidor från samma domän behandlas inte som oberoende bekräftelse.
+
+- v2.13.0: Branschpuls med Marknaden just nu och ett kompakt Senaste från omvärlden.
+
+- v2.14.0: Lokal radar med 10 regionala SVT-redaktioner och regionala avfallsaktörer Vafabmiljö/Renova. Lokala träffar filtreras på branschord innan artikelhämtning.
+
+## v2.16.0
+Lokal signalmotor: Länsstyrelseflöden och tidig klassificering av tillstånd, beslut, etableringar, investeringar, kapacitet, mark/bygglov, tillsyn och rekrytering. Branschvyn har en särskild Lokal signalradar.
+
+## v2.17.0
+Konkurrenternas förändringsbild jämför senaste 30 dagar med föregående period, visar stödjande händelser och motbevis och håller observerade mönster isär från verifierad strategi.

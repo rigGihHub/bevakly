@@ -28,8 +28,14 @@ export default function Sidebar() {
 
   const go=(target:string)=>{
     setActive(target);
-    const el=document.getElementById(target);
-    if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
+    const competitorTargets=["actors","strategic-moves"];
+    const industryTargets=["industry-feed","signals"];
+    if(competitorTargets.includes(target)) window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"competitors"}));
+    if(industryTargets.includes(target)) window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"industry"}));
+    window.setTimeout(()=>{
+      const el=document.getElementById(target);
+      if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
+    },50);
   };
 
   return (
@@ -44,7 +50,7 @@ export default function Sidebar() {
       </nav>
       <div className="sidebarFooter">
         <div className="profileDot">B</div>
-        <div><strong>Bevakly</strong><span>Omvärldsbevakning</span></div>
+        <div><strong>Bevakly</strong><span>Omvärldsbevakning · v2.16.0</span></div>
       </div>
     </aside>
   );

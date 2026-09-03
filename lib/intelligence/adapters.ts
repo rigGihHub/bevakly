@@ -25,6 +25,8 @@ function allowedPath(url:string, source:WatchSource){
     if(source.id==="eea-news") return /newsroom|publications|analysis/.test(path);
     if(source.id==="cinea-news") return /news-events\/news|programme|projects/.test(path);
     if(source.id==="letsrecycle") return /news\//.test(path);
+    if(source.id.startsWith("svt-")) return /\/nyheter\/lokalt\//.test(path);
+    if(source.id==="vafab-news" || source.id==="renova-recycling") return /\/(news|pressreleases|latest_news|subjects)\//.test(path) || /\/(news|pressreleases)\b/.test(path);
     if(source.type==="competitor") return /nyhet|news|press|insikt|aktuellt|media/.test(path);
     return true;
   }catch{return false;}
