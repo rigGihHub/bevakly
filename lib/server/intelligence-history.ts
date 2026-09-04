@@ -115,8 +115,12 @@ export async function persistIntelligenceHistory(
       eventUrl:row.event_url?String(row.event_url):null,
     }));
 
-    return {enabled:true,savedSourceRuns,savedEventObservations,sourceLearning:buildSourceLearning(history),historicalChanges:buildHistoricalChanges(observations),competitorBaselines:buildCompetitorBaselines(observations),reason:null};
+    const dailyHistory=[...new Map(history.map(item=>{
+      const day=item.observedAt.slice(0,10);
+      return [`${item.sourceId}|${day}`,item] as const;
+    })).values()];
+    return {enabled:true,savedSourceRuns,savedEventObservations,sourceLearning:buildSourceLearning(dailyHistory),historicalChanges:buildHistoricalChanges(observations),competitorBaselines:buildCompetitorBaselines(observations),reason:null};
   }catch(error){
-    return {enabled:true,savedSourceRuns:0,savedEventObservations:0,sourceLearning:[],historicalChanges:[],competitorBaselines:[],reason:databaseErrorMessage(error)};
+    return {enabled:false,savedSourceRuns:0,savedEventObservations:0,sourceLearning:[],historicalChanges:[],competitorBaselines:[],reason:databaseErrorMessage(error)};
   }
 }

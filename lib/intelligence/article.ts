@@ -33,7 +33,7 @@ function firstMatch(html: string, patterns: RegExp[]) {
   return "";
 }
 
-export function extractArticle(html: string): ArticleExtraction {
+export function extractArticle(html: string, keywords: string[] = wasteKeywords): ArticleExtraction {
   const title = meta(html, "og:title") || firstMatch(html, [/<h1[^>]*>([\s\S]*?)<\/h1>/i, /<title[^>]*>([\s\S]*?)<\/title>/i]);
   const description = meta(html, "og:description") || meta(html, "description");
   const dateRaw = meta(html, "article:published_time") || firstMatch(html, [
@@ -41,7 +41,7 @@ export function extractArticle(html: string): ArticleExtraction {
     /"datePublished"\s*:\s*"([^"]+)"/i,
   ]);
   const paragraphs = [...html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map(m => clean(m[1]))
-    .filter(p => p.length >= 45 && wasteKeywords.some(k => p.toLocaleLowerCase("sv-SE").includes(k)))
+    .filter(p => p.length >= 45 && (keywords.length===0 || keywords.some(k => p.toLocaleLowerCase("sv-SE").includes(k.toLocaleLowerCase("sv-SE")))))
     .slice(0, 5);
   const textSample = paragraphs.join(" ").slice(0, 1600);
   let publishedAt: string | null = null;

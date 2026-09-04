@@ -45,7 +45,7 @@ function keywordMatches(text:string,keywords:string[]){
 }
 function likelyEditorial(url:string,title:string){
   const hay=`${url} ${title}`.toLocaleLowerCase('sv-SE');
-  return /news|nyhet|press|article|artikel|insight|insikt|project|projekt|report|rapport|research|policy|regulation|circular|recycl|waste|avfall|environment|miljo/.test(hay);
+  return /news|nyhet|press|article|artikel|insight|insikt|project|projekt|report|rapport|research|policy|regulation|circular|recycl|waste|avfall|environment|miljo|samrad|samråd|tillstand|tillstånd|kungorelse|kungörelse|diarie|bygglov|detaljplan|planbesked|markanvisning|remiss|tillsyn|rekryter|ledig.?jobb|career|jobb/.test(hay);
 }
 
 export function discoverSourceSuggestions(observations:SourceDiscoveryObservation[],knownSources:WatchSource[],keywords:string[]):SourceSuggestion[]{
