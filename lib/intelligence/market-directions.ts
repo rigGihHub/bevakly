@@ -1,10 +1,11 @@
+import { assessFactConfidence, assessInterpretationConfidence, type ConfidenceLevel } from './signal-confidence';
 export type DirectionItem={
   title:string;url:string;source:string;publishedAt:string;category:string;score:number;
   factualSummary:string;geographies:string[];competitors:string[];independentSourceCount:number;
 };
 export type MarketDirection={
   id:string;label:string;status:'Tidigt tecken'|'Växande riktning'|'Tydlig riktning';
-  confidence:'Låg'|'Medel'|'Hög';summary:string;meaning:string;watchNext:string;
+  confidence:ConfidenceLevel;factConfidence:ConfidenceLevel;interpretationConfidence:ConfidenceLevel;confidenceReasons:string[];confidenceLimitations:string[];summary:string;meaning:string;watchNext:string;
   eventCount:number;sourceCount:number;competitors:string[];geographies:string[];
   evidence:Array<{title:string;url:string;source:string}>;
 };
@@ -35,13 +36,20 @@ export function buildMarketDirections(items:DirectionItem[],limit=4):MarketDirec
    const geographies=[...new Set(unique.flatMap(x=>x.geographies))];
    const strong=unique.filter(x=>x.score>=75).length;
    const independentSupport=unique.filter(x=>x.independentSourceCount>=2).length;
-   let status:MarketDirection['status']='Tidigt tecken',confidence:MarketDirection['confidence']='Låg';
-   if(unique.length>=5&&sources.size>=3&&strong>=2){status='Tydlig riktning';confidence='Hög'}
-   else if(unique.length>=3&&sources.size>=2){status='Växande riktning';confidence='Medel'}
+   const factAssessment=assessFactConfidence({sourceType:'media',articleReadOk:true,independentOrigins:sources.size});
+   const interpretationAssessment=assessInterpretationConfidence({
+     factConfidence:factAssessment.level,eventCount:unique.length,independentOrigins:sources.size,
+     signalTypeCount:new Set(unique.map(x=>x.category)).size,newGeographyCount:geographies.length>1?geographies.length:0,
+     strongEvidenceCount:strong
+   });
+   let status:MarketDirection['status']='Tidigt tecken';
+   if(interpretationAssessment.level==='Hög'&&unique.length>=5)status='Tydlig riktning';
+   else if(interpretationAssessment.level!=='Låg'&&unique.length>=3)status='Växande riktning';
+   const confidence=interpretationAssessment.level;
    const actorText=competitors.length?` Berör bland annat ${competitors.slice(0,3).join(', ')}.`:'';
    const geoText=geographies.length?` Syns i ${geographies.slice(0,3).join(', ')}.`:'';
    out.push({
-     id:group.id,label:group.label,status,confidence,
+     id:group.id,label:group.label,status,confidence,factConfidence:factAssessment.level,interpretationConfidence:interpretationAssessment.level,confidenceReasons:[...factAssessment.reasons,...interpretationAssessment.reasons],confidenceLimitations:[...factAssessment.limitations,...interpretationAssessment.limitations],
      summary:`${unique.length} separata händelser från ${sources.size} källursprung senaste 30 dagarna.${actorText}${geoText}`,
      meaning:group.meaning,watchNext:group.watch,eventCount:unique.length,sourceCount:sources.size,
      competitors,geographies,

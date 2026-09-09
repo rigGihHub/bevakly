@@ -2,6 +2,8 @@ import type { DiscoveryProvider, DiscoveryProviderHit, DiscoveryProviderQuery, P
 import { defaultProviderPolicy } from './discovery-provider';
 import { providerHealth, recordProviderFailure, recordProviderSuccess } from './discovery-provider-health';
 import { dedupeDiscoveryResults, processDiscoveryResult, type DiscoveryProcessedResult } from './discovery-result-pipeline';
+import { recoverArticleMetadata } from './article-recovery';
+import { inferMunicipalDocumentDate } from './municipal-protocol-discovery';
 
 export type DiscoveryOrchestratorRun={
   status:'waiting-for-provider'|'completed'|'budget-stopped';
@@ -11,8 +13,17 @@ export type DiscoveryOrchestratorRun={
   providerRequests:number;
   cacheHits:number;
   estimatedCost:number;
+  providerHits:number;
+  processedResults:number;
+  acceptedBeforeDedupe:number;
   accepted:number;
   rejected:number;
+  hostRejected:number;
+  dedupeDropped:number;
+  recoveryAttempted:number;
+  recoverySucceeded:number;
+  recoveredAccepted:number;
+  rejectionReasons:Record<string,number>;
   stoppedReason:string|null;
   attempts:Array<{jobId:string;providerId:string;ok:boolean;fromCache:boolean;hitCount:number;latencyMs:number;error:string|null}>;
   results:DiscoveryProcessedResult[];
@@ -45,7 +56,7 @@ export async function runDiscoveryOrchestrator(input:{
 }):Promise<DiscoveryOrchestratorRun>{
   const policy=input.policy??defaultProviderPolicy;
   const requestCost=Math.max(0,input.estimatedCostPerProviderRequest??0.01);
-  const base={configuredProviders:input.providers.map(x=>x.id),queuedJobs:input.queue.length,executedQueries:0,providerRequests:0,cacheHits:0,estimatedCost:0,accepted:0,rejected:0,stoppedReason:null as string|null,attempts:[] as DiscoveryOrchestratorRun['attempts'],results:[] as DiscoveryProcessedResult[]};
+  const base={configuredProviders:input.providers.map(x=>x.id),queuedJobs:input.queue.length,executedQueries:0,providerRequests:0,cacheHits:0,estimatedCost:0,providerHits:0,processedResults:0,acceptedBeforeDedupe:0,accepted:0,rejected:0,hostRejected:0,dedupeDropped:0,recoveryAttempted:0,recoverySucceeded:0,recoveredAccepted:0,rejectionReasons:{} as Record<string,number>,stoppedReason:null as string|null,attempts:[] as DiscoveryOrchestratorRun['attempts'],results:[] as DiscoveryProcessedResult[]};
   if(input.providers.length===0)return {...base,status:'waiting-for-provider'};
 
   const processed:DiscoveryProcessedResult[]=[];
@@ -77,12 +88,47 @@ export async function runDiscoveryOrchestrator(input:{
       base.executedQueries++;
       if(!succeeded)continue;
     }
+    base.providerHits+=hits.length;
     for(const hit of hits){
-      processed.push(processDiscoveryResult({jobId:query.jobId,targetId:query.targetId,targetName:query.targetName,query:query.query,...hit},{industryKeywords:input.industryKeywords,knownUrls:input.knownUrls,maxAgeDays:input.maxAgeDays}));
+      if(query.allowedHosts?.length){
+        let hostname='';
+        try{hostname=new URL(hit.url).hostname.toLocaleLowerCase('sv-SE').replace(/^www\./,'');}catch{}
+        const allowed=query.allowedHosts.some(raw=>{
+          const host=raw.toLocaleLowerCase('sv-SE').replace(/^www\./,'');
+          return hostname===host||hostname.endsWith(`.${host}`);
+        });
+        if(!allowed){base.hostRejected++;continue;}
+      }
+      const protocolDate=query.sourceClass==='municipal-protocol'&&!hit.publishedAt?inferMunicipalDocumentDate(hit):null;
+      const preparedHit=protocolDate?{...hit,publishedAt:protocolDate}:hit;
+      let result=processDiscoveryResult({jobId:query.jobId,targetId:query.targetId,targetName:query.targetName,query:query.query,...preparedHit},{industryKeywords:input.industryKeywords,knownUrls:input.knownUrls,maxAgeDays:input.maxAgeDays});
+      const recoverable=result.status==='rejected'&&['Publiceringsdatum saknas','Publiceringsdatum kunde inte tolkas','Saknar både branschmatchning och tidig signal'].includes(result.rejectionReason??'');
+      // Recovery is intentionally capped: it is a second-chance path, not another crawler.
+      if(recoverable&&base.recoveryAttempted<24){
+        base.recoveryAttempted++;
+        const recovered=await recoverArticleMetadata({url:preparedHit.url,keywords:input.industryKeywords,timeoutMs:5500});
+        if(recovered.ok){
+          base.recoverySucceeded++;
+          const enrichedHit={...preparedHit,title:recovered.title||preparedHit.title,publishedAt:recovered.publishedAt||preparedHit.publishedAt,snippet:recovered.snippet||preparedHit.snippet};
+          const retry=processDiscoveryResult({jobId:query.jobId,targetId:query.targetId,targetName:query.targetName,query:query.query,...enrichedHit},{industryKeywords:input.industryKeywords,knownUrls:input.knownUrls,maxAgeDays:input.maxAgeDays});
+          if(result.status==='rejected'&&retry.status==='accepted')base.recoveredAccepted++;
+          result=retry;
+        }
+      }
+      processed.push(result);
     }
   }
-  base.rejected=processed.filter(x=>x.status==='rejected').length;
+  base.processedResults=processed.length;
+  const acceptedBeforeDedupe=processed.filter(x=>x.status==='accepted');
+  const rejected=processed.filter(x=>x.status==='rejected');
+  base.acceptedBeforeDedupe=acceptedBeforeDedupe.length;
+  base.rejected=rejected.length;
+  for(const result of rejected){
+    const reason=result.rejectionReason??'Okänd avvisningsorsak';
+    base.rejectionReasons[reason]=(base.rejectionReasons[reason]??0)+1;
+  }
   base.results=dedupeDiscoveryResults(processed);
   base.accepted=base.results.length;
+  base.dedupeDropped=Math.max(0,base.acceptedBeforeDedupe-base.accepted);
   return {...base,status:base.stoppedReason?'budget-stopped':'completed'};
 }

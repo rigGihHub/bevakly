@@ -1,5 +1,5 @@
 import type { WatchSource } from "./sources";
-import { wasteKeywords } from "./sources";
+import { wasteDiscoveryKeywords } from "./sources";
 
 export type SourceCandidate = { title:string; url:string };
 
@@ -26,6 +26,14 @@ function allowedPath(url:string, source:WatchSource){
     if(source.id==="cinea-news") return /news-events\/news|programme|projects/.test(path);
     if(source.id==="letsrecycle") return /news\//.test(path);
     if(source.id.startsWith("svt-")) return /\/nyheter\/lokalt\//.test(path);
+    if(source.id==="sorab-news") return /nyheter/.test(path);
+    if(source.id==="nsr-news") return /nyheter/.test(path);
+    if(source.id==="june-avfall-news") return /aktuellt|nyhetsarkiv|nyheter/.test(path);
+    if(source.id==="goteborg-kretslopp") return /aktuelltarkiv|kretslopp|avfall|kungorelser|protokoll/.test(path);
+    if(source.id==="dk-miljostyrelsen-news") return /nyheder/.test(path);
+    if(source.id==="norway-ssb-waste") return /natur-og-miljo\/avfall/.test(path);
+    if(source.id==="nffa-news") return /aktuelt/.test(path);
+    if(source.id==="eu-circular-platform") return /news-and-events\/all-news/.test(path);
     if(source.id==="vafab-news" || source.id==="renova-recycling") return /\/(news|pressreleases|latest_news|subjects)\//.test(path) || /\/(news|pressreleases)\b/.test(path);
     if(source.type==="competitor") return /nyhet|news|press|insikt|aktuellt|media/.test(path);
     return true;
@@ -33,7 +41,7 @@ function allowedPath(url:string, source:WatchSource){
 }
 
 export function extractSourceCandidates(html:string, source:WatchSource, keywords?:string[]):SourceCandidate[]{
-  const activeKeywords=keywords?.length?keywords:wasteKeywords;
+  const activeKeywords=keywords?.length?keywords:wasteDiscoveryKeywords;
   const result:SourceCandidate[]=[];
   const re=/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match:RegExpExecArray|null;
@@ -49,5 +57,5 @@ export function extractSourceCandidates(html:string, source:WatchSource, keyword
     const key=item.url.replace(/\/$/,"");
     if(!unique.has(key)) unique.set(key,item);
   }
-  return [...unique.values()].slice(0,20);
+  return [...unique.values()].slice(0,36);
 }

@@ -1,0 +1,13 @@
+import {assessSourceDiversity,diversityExplorationBonus} from '../lib/intelligence/source-diversity.ts';
+import type {WatchSource} from '../lib/intelligence/sources.ts';
+const s=(id:string,type:WatchSource['type'],description:string,scope:WatchSource['scope']='sweden'):WatchSource=>({id,name:id,listingUrl:`https://${id}.example/news`,baseUrl:`https://${id}.example`,type,scope,tier:2,trustScore:70,enabled:true,description});
+const assert=(x:boolean,m:string)=>{if(!x)throw new Error(m)};
+let r=assessSourceDiversity([s('national-media','media','nationella avfallsnyheter'),s('more-media','media','branschbevakning')]); assert(r.missingSourceClasses.includes('authority'),'1 authority blind spot');
+r=assessSourceDiversity([s('company-a','company','investering anläggning'),s('company-b','competitor','kapacitet investering')]); assert(r.blindSpots.some(x=>x.key==='independent journalism'),'2 independent blind spot');
+r=assessSourceDiversity([s('stockholm','media','Stockholm'),s('goteborg','media','Göteborg')]); assert(r.underCoveredGeographies.includes('Örebro'),'3 geography gap');
+r=assessSourceDiversity([s('invest','industry','investering finansiering'),s('invest2','company','investering')]); assert(r.underCoveredThemes.includes('permits/environment'),'4 permit gap');
+const local=s('orebro-local','media','Örebro lokal avfallsbevakning'); r=assessSourceDiversity([s('stockholm','media','Stockholm'),s('authority','authority','miljötillstånd Stockholm')]); assert(diversityExplorationBonus(local,r).bonus>0,'5 local exploration');
+const weak={...local,trustScore:10}; assert(weak.trustScore===10&&diversityExplorationBonus(weak,r).bonus>0,'6 trust unchanged');
+r=assessSourceDiversity([s('republish-a','company','pressmeddelande'),s('republish-b','company','pressmeddelande')]); assert(!r.provenanceBalance['independent journalism'],'7 republish/company not independent');
+r=assessSourceDiversity([s('auth','authority','miljötillstånd lag regler Örebro Stockholm Malmö Göteborg upphandling kontrakt bygglov investering pris jobb'),s('media','media','Örebro Stockholm Malmö Göteborg avtal anläggning tillstånd detaljplan förvärv investering pris rekrytering domstol'),s('industry','industry','upphandling kapacitet miljöprövning etablering förvärv investering material jobb regler'),s('research','research','kapacitet investering material'),s('eu','eu','regler avfall','eu'),s('proc','procurement','upphandling tilldelning'),s('company','company','anläggning investering')]); assert(r.coverageScore>=80,'8 balanced fixture');
+console.log('v2.78 source diversity scenario QA PASS',r.coverageScore);

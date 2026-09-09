@@ -1,0 +1,12 @@
+import {reevaluatePersistentCandidate} from '../lib/intelligence/ambiguous-case-reevaluation';
+import type {PersistentAmbiguousCandidate} from '../lib/intelligence/ambiguous-case-persistence';
+const c:PersistentAmbiguousCandidate={candidateKey:'c1',evidenceIds:['a','b'],evidence:[{id:'a',title:'Planerad terminal',text:'PreZero planerar återvinningsterminal',competitors:['PreZero'],geographies:['Örebro'],publishedAt:'2026-09-01T00:00:00Z'},{id:'b',title:'Samråd',text:'Samråd om avfallsanläggning',competitors:['PreZero'],geographies:['Örebro'],publishedAt:'2026-09-02T00:00:00Z'}],identityScore:34,reasons:['held'],firstSeen:'2026-09-01T00:00:00Z',latestSeen:'2026-09-02T00:00:00Z',lastObservedAt:'2026-09-02T00:00:00Z',status:'held',allowConfidenceImpact:false};
+const fresh=(id:string,text:string)=>({id,title:text,text,competitors:['PreZero'],geographies:['Örebro'],publishedAt:'2026-09-08T00:00:00Z'});
+let r=reevaluatePersistentCandidate(c,[fresh('n','Bygglov för fastigheten Ormesta 12:4, diarienummer KS 2026-123')],'2026-09-08T00:00:00Z');
+if(!['promote-probable','promote-same-case'].includes(r.decision))throw new Error('Expected promotion from corroborating new evidence');
+if(r.allowConfidenceImpact!==false)throw new Error('Persistence may never directly affect confidence');
+r=reevaluatePersistentCandidate(c,[{...fresh('x','Annat projekt'),competitors:[],geographies:['Malmö']}],'2026-09-08T00:00:00Z');
+if(r.decision!=='keep-held')throw new Error('Unrelated evidence must not promote');
+r=reevaluatePersistentCandidate({...c,lastObservedAt:'2026-01-01T00:00:00Z'},[],'2026-09-08T00:00:00Z');
+if(r.decision!=='expire')throw new Error('Stale candidate should expire');
+console.log('PASS promotion; PASS no direct confidence; PASS unrelated stays held; PASS expiry');

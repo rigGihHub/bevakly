@@ -12,6 +12,7 @@ import CompetitorIntelligence from "@/components/CompetitorIntelligence";
 import ActorWatchlist from "@/components/ActorWatchlist";
 import ActorComparison from "@/components/ActorComparison";
 import StrategicMoves from "@/components/StrategicMoves";
+import CompetitorNow from "@/components/CompetitorNow";
 
 type Track = "industry" | "competitors";
 
@@ -51,7 +52,7 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.18.0</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.97.0</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
@@ -79,6 +80,7 @@ export default function Home() {
       </> : <section id="actors" className="competitorTrack navAnchor">
         <div className="trackIntro"><p className="eyebrow">KONKURRENTANALYS</p><h2>Vad håller konkurrenterna på med?</h2><p>Bevakly samlar händelser per aktör och letar efter förändringar i aktivitet, teman, geografi och möjliga strategiska förflyttningar. Hypoteser hålls tydligt isär från fakta.</p></div>
         {activeProfile.actors.length>0 ? <>
+          <CompetitorNow actors={activeProfile.actors} />
           <ActorWatchlist actors={activeProfile.actors} />
           {activeProfile.actors.length>1&&<ActorComparison actors={activeProfile.actors} />}
           {activeProfile.industry==="waste"&&<CompetitorIntelligence />}

@@ -1,3 +1,4 @@
+import { assessFactConfidence, assessInterpretationConfidence, type ConfidenceLevel } from './signal-confidence';
 export type AnalystFeedItem = {
   title:string;
   url:string;
@@ -32,6 +33,8 @@ export type AnalystCompetitorBaseline = {
   ratio:number|null;
   warningLevel:'Ingen'|'Bevaka'|'Tydlig';
   confidence:'Låg'|'Medel'|'Hög';
+  independentSources:number;
+  newGeographies:string[];
   signals:string[];
   assessment:string;
   evidence:Array<{title:string;eventUrl?:string|null;publishedAt?:string|null;sourceName?:string|null}>;
@@ -44,7 +47,11 @@ export type AnalystFinding = {
   fact:string;
   interpretation:string;
   watchNext:string;
-  confidence:'Låg'|'Medel'|'Hög';
+  confidence:ConfidenceLevel;
+  factConfidence:ConfidenceLevel;
+  interpretationConfidence:ConfidenceLevel;
+  confidenceReasons:string[];
+  confidenceLimitations:string[];
   evidenceCount:number;
   links:Array<{title:string;url:string;source?:string|null}>;
   priority:number;
@@ -80,6 +87,12 @@ export function buildAnalystBrief(
   for(const change of historicalChanges){
     if(change.confidence==='Låg') continue;
     const ratioText=change.ratio!==null?`${change.ratio}× den historiska månadsnivån`:`${change.current30} händelser senaste 30 dagarna`;
+    const sourceCount=new Set(change.evidence.map(e=>e.sourceName).filter(Boolean)).size;
+    const factAssessment=assessFactConfidence({sourceType:'media',articleReadOk:true,independentOrigins:sourceCount});
+    const interpretationAssessment=assessInterpretationConfidence({
+      factConfidence:factAssessment.level,eventCount:change.current30,independentOrigins:sourceCount,
+      historicalDeviationRatio:change.ratio,signalTypeCount:change.dimension==='kategori'?1:0
+    });
     findings.push({
       id:`history:${change.id}`,
       kind:'förändring',
@@ -87,15 +100,24 @@ export function buildAnalystBrief(
       fact:`${change.current30} händelser senaste 30 dagar, jämfört med cirka ${change.baselineMonthly.toFixed(1)} per månad tidigare (${ratioText}).`,
       interpretation:change.assessment,
       watchNext:watchForCategory(change.dimension==='kategori'?change.label:''),
-      confidence:change.confidence,
+      confidence:interpretationAssessment.level,
+      factConfidence:factAssessment.level,interpretationConfidence:interpretationAssessment.level,
+      confidenceReasons:[...factAssessment.reasons,...interpretationAssessment.reasons],
+      confidenceLimitations:[...factAssessment.limitations,...interpretationAssessment.limitations],
       evidenceCount:change.evidence.length,
       links:dedupeLinks(change.evidence.map(e=>({title:e.title,url:e.eventUrl??'',source:e.sourceName}))).slice(0,3),
-      priority:70+rankConfidence(change.confidence)*8+(change.status.includes('ovanligt')?8:0)+(change.status.includes('ny')?6:0),
+      priority:70+rankConfidence(interpretationAssessment.level)*8+(change.status.includes('ovanligt')?8:0)+(change.status.includes('ny')?6:0),
     });
   }
 
   for(const competitor of competitorBaselines){
     if(competitor.warningLevel==='Ingen'||competitor.confidence==='Låg') continue;
+    const factAssessment=assessFactConfidence({sourceType:'media',articleReadOk:true,independentOrigins:competitor.independentSources});
+    const interpretationAssessment=assessInterpretationConfidence({
+      factConfidence:factAssessment.level,eventCount:competitor.current30,independentOrigins:competitor.independentSources,
+      signalTypeCount:Math.max(1,competitor.signals.filter(s=>!s.includes('separata källor')).length),
+      historicalDeviationRatio:competitor.ratio,newGeographyCount:competitor.newGeographies.length
+    });
     findings.push({
       id:`competitor:${competitor.competitor}`,
       kind:'konkurrent',
@@ -103,10 +125,13 @@ export function buildAnalystBrief(
       fact:`${competitor.current30} observerade händelser senaste 30 dagar mot cirka ${competitor.baselineMonthly.toFixed(1)} per normalmånad.${competitor.signals.length?` ${competitor.signals.slice(0,2).join(' ')}`:''}`,
       interpretation:competitor.assessment,
       watchNext:`Följ nästa konkreta steg från ${competitor.competitor}: tillstånd, investering, rekrytering, kapacitet, ny geografi eller förvärv.`,
-      confidence:competitor.confidence,
+      confidence:interpretationAssessment.level,
+      factConfidence:factAssessment.level,interpretationConfidence:interpretationAssessment.level,
+      confidenceReasons:[...factAssessment.reasons,...interpretationAssessment.reasons],
+      confidenceLimitations:[...factAssessment.limitations,...interpretationAssessment.limitations],
       evidenceCount:competitor.evidence.length,
       links:dedupeLinks(competitor.evidence.map(e=>({title:e.title,url:e.eventUrl??'',source:e.sourceName}))).slice(0,3),
-      priority:competitor.warningLevel==='Tydlig'?96:82,
+      priority:(competitor.warningLevel==='Tydlig'?88:76)+rankConfidence(interpretationAssessment.level)*3,
     });
   }
 
@@ -123,17 +148,22 @@ export function buildAnalystBrief(
     if(alreadyCovered) continue;
     const actor=item.competitors[0];
     const geo=item.geographies[0];
+    const factAssessment=assessFactConfidence({sourceType:'media',articleReadOk:true,independentOrigins:item.independentSourceCount});
+    const interpretationAssessment=assessInterpretationConfidence({factConfidence:factAssessment.level,eventCount:1,independentOrigins:item.independentSourceCount});
     findings.push({
       id:`event:${item.url}`,
       kind:'ny utveckling',
       headline:actor?`${actor}: ny relevant utveckling`:geo?`Ny utveckling i ${geo}`:item.title,
       fact:item.factualSummary||item.title,
-      interpretation:`Detta är en aktuell händelse med ${item.score}/100 i relevans. ${item.independentSourceCount>=2?'Flera oberoende ursprung stärker signalen.':'Källstödet är fortfarande begränsat, så Bevakly behandlar den som en tidig signal.'}`,
+      interpretation:`Detta är en aktuell och relevant händelse. ${item.independentSourceCount>=2?'Flera sannolikt oberoende ursprung stärker faktastödet.':'Den strategiska betydelsen är fortfarande osäker och behandlas som en tidig tolkning.'}`,
       watchNext:watchForCategory(item.category),
-      confidence:item.independentSourceCount>=2&&item.score>=80?'Hög':item.score>=75?'Medel':'Låg',
+      confidence:interpretationAssessment.level,
+      factConfidence:factAssessment.level,interpretationConfidence:interpretationAssessment.level,
+      confidenceReasons:[...factAssessment.reasons,...interpretationAssessment.reasons],
+      confidenceLimitations:[...factAssessment.limitations,...interpretationAssessment.limitations],
       evidenceCount:1,
       links:[{title:item.title,url:item.url,source:item.source}],
-      priority:item.score+(item.independentSourceCount>=2?8:0),
+      priority:item.score+(item.independentSourceCount>=2?4:0)+rankConfidence(interpretationAssessment.level)*2,
     });
   }
 

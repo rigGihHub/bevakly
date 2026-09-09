@@ -1,6 +1,7 @@
 import { assessEarlySignal, type EarlySignalAssessment } from './early-signals';
 import { matchCompetitors, matchGeographies } from './entities';
 import { assessEvidenceQuality, type EvidenceQuality } from './evidence-quality';
+import { assessFactConfidence, assessInterpretationConfidence, lowerConfidence } from './signal-confidence';
 
 export type DiscoveryProviderResult = {
   jobId:string;
@@ -40,6 +41,10 @@ export type DiscoveryProcessedResult = {
   earlySignal:EarlySignalAssessment|null;
   evidenceQuality:EvidenceQuality;
   confidence:'låg'|'medel'|'hög';
+  factConfidence:'Låg'|'Medel'|'Hög';
+  interpretationConfidence:'Låg'|'Medel'|'Hög';
+  confidenceReasons:string[];
+  confidenceLimitations:string[];
   score:number;
   status:'accepted'|'rejected';
   rejectionReason:string|null;
@@ -97,12 +102,6 @@ function validPublishedAt(value:string|null,maxAgeDays:number){
   return {ok:true,iso:date.toISOString(),reason:null};
 }
 
-function confidenceFor(input:{score:number;earlySignal:EarlySignalAssessment|null;evidence:EvidenceQuality}):'låg'|'medel'|'hög'{
-  if(input.evidence.quality==='Starkt'&&input.score>=80)return 'hög';
-  if(input.evidence.quality==='Medel'||input.earlySignal?.strength==='stark'||input.score>=72)return 'medel';
-  return 'låg';
-}
-
 function stableId(value:string){
   let hash=2166136261;
   for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
@@ -117,8 +116,9 @@ export function processDiscoveryResult(
   const canonicalUrl=canonicalizeDiscoveryUrl(raw.url);
   const title=cleanText(raw.title);
   const snippet=cleanText(raw.snippet);
-  const text=`${title} ${snippet} ${raw.targetName} ${raw.query}`;
+  const text=`${title} ${snippet} ${raw.targetName}`;
   const hits=keywordHits(text,context.industryKeywords);
+  const competitorJob=raw.targetId.startsWith('competitor-jobs:');
   const earlySignal=assessEarlySignal({title,body:snippet,url:canonicalUrl||raw.url,source:raw.source??undefined});
   const geographies=matchGeographies(text);
   const competitors=matchCompetitors(text).map(x=>x.name);
@@ -129,17 +129,18 @@ export function processDiscoveryResult(
   if(earlySignal)relevanceReasons.push(`${earlySignal.type} identifierad`);
   if(geographies.length)relevanceReasons.push(`Geografi: ${geographies.slice(0,2).join(', ')}`);
   if(competitors.length)relevanceReasons.push(`Konkurrent: ${competitors.slice(0,2).join(', ')}`);
+  if(competitorJob)relevanceReasons.push('Verifierad jobbannonskälla för bevakad konkurrent');
 
   let rejectionReason:string|null=null;
   if(!canonicalUrl)rejectionReason='Ogiltig URL';
   else if(title.length<8)rejectionReason='Rubriken är för kort för säker klassificering';
   else if(!date.ok)rejectionReason=date.reason;
   else if(known.has(canonicalUrl))rejectionReason='Finns redan i det kända flödet';
-  else if(hits.length===0&&!earlySignal)rejectionReason='Saknar både branschmatchning och tidig signal';
+  else if(hits.length===0&&!earlySignal&&!competitorJob)rejectionReason='Saknar både branschmatchning och tidig signal';
 
   const relevant=!rejectionReason;
   const source=raw.source?.trim()||domainOf(canonicalUrl)||'Okänd discovery-källa';
-  const sourceType=/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen)/i.test(`${source} ${canonicalUrl}`)?'authority':'media';
+  const sourceType=(raw.targetId.startsWith('municipal-protocol:')||raw.targetId.startsWith('public-record:'))||/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen|domstol|konkurrensverket|boverket)/i.test(`${source} ${canonicalUrl}`)?'authority':'media';
   const sourceTier=sourceType==='authority'?1:3;
   const trustScore=sourceType==='authority'?95:60;
   const evidenceQuality=assessEvidenceQuality([{
@@ -155,12 +156,21 @@ export function processDiscoveryResult(
   if(sourceType==='authority')score+=10;
   score=Math.min(100,score);
 
+  const factAssessment=assessFactConfidence({evidence:evidenceQuality,sourceType,sourceTier,trustScore,articleReadOk:true,explicitPrimarySource:evidenceQuality.originalSourceCount>0});
+  const interpretationAssessment=assessInterpretationConfidence({
+    factConfidence:factAssessment.level,eventCount:1,independentOrigins:evidenceQuality.independentOrigins,
+    signalTypeCount:earlySignal?1:0,strongEvidenceCount:earlySignal?.strength==='stark'?1:0
+  });
+
   return {
     id:stableId(`${raw.jobId}|${canonicalUrl||raw.url}`),
     jobId:raw.jobId,targetId:raw.targetId,targetName:raw.targetName,query:raw.query,
     title,url:raw.url,canonicalUrl,publishedAt:date.iso??'',source,snippet,
     relevant,relevanceReasons,keywordHits:hits,geographies,competitors,earlySignal,
-    evidenceQuality,confidence:confidenceFor({score,earlySignal,evidence:evidenceQuality}),
+    evidenceQuality,confidence:lowerConfidence(factAssessment.level),
+    factConfidence:factAssessment.level,interpretationConfidence:interpretationAssessment.level,
+    confidenceReasons:[...factAssessment.reasons,...interpretationAssessment.reasons],
+    confidenceLimitations:[...factAssessment.limitations,...interpretationAssessment.limitations],
     score,status:relevant?'accepted':'rejected',rejectionReason
   };
 }
@@ -197,9 +207,9 @@ export function buildDiscoveryEvidence(results:DiscoveryProcessedResult[]){
     members,
     evidenceQuality:assessEvidenceQuality(members.map(x=>({
       title:x.title,url:x.canonicalUrl,source:x.source,sourceId:`discovery:${domainOf(x.canonicalUrl)}`,
-      sourceType:/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen)/i.test(`${x.source} ${x.canonicalUrl}`)?'authority':'media',
-      sourceTier:/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen)/i.test(`${x.source} ${x.canonicalUrl}`)?1:3,
-      trustScore:/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen)/i.test(`${x.source} ${x.canonicalUrl}`)?95:60
+      sourceType:(x.targetId.startsWith('municipal-protocol:')||x.targetId.startsWith('public-record:'))||/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen|domstol|konkurrensverket|boverket)/i.test(`${x.source} ${x.canonicalUrl}`)?'authority':'media',
+      sourceTier:(x.targetId.startsWith('municipal-protocol:')||x.targetId.startsWith('public-record:'))||/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen|domstol|konkurrensverket|boverket)/i.test(`${x.source} ${x.canonicalUrl}`)?1:3,
+      trustScore:(x.targetId.startsWith('municipal-protocol:')||x.targetId.startsWith('public-record:'))||/(lansstyrelsen|kommun|naturvardsverket|regeringen|riksdagen|domstol|konkurrensverket|boverket)/i.test(`${x.source} ${x.canonicalUrl}`)?95:60
     })))
   }));
 }

@@ -5,6 +5,8 @@ export type DiscoveryProviderQuery={
   county:string|null;
   intent:string;
   query:string;
+  allowedHosts?:string[];
+  sourceClass?:'municipal-protocol'|'competitor-jobs'|'environmental-record'|'competition-record'|'planning-record'|'legal-record'|'news'|'authority';
 };
 
 export type DiscoveryProviderHit={
@@ -67,6 +69,15 @@ export const defaultProviderPolicy:ProviderPolicy={
   cacheTtlMs:6*60*60*1000,
   retryCount:2,
   baseBackoffMs:350,
+};
+
+// Industry feed uses a wider budget so broad news discovery and early-signal discovery can coexist.
+// The monetary ceiling is unchanged; this raises breadth, not uncontrolled spend.
+export const newsIntakeProviderPolicy:ProviderPolicy={
+  ...defaultProviderPolicy,
+  maxQueriesPerRun:20,
+  maxResultsPerQuery:14,
+  cacheTtlMs:3*60*60*1000,
 };
 
 export async function runDiscoveryProvider(

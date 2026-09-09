@@ -1,12 +1,30 @@
 {
   "name": "bevakly",
-  "version": "2.36.0",
+  "version": "2.98.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "qa:news-precision": "node --experimental-strip-types scripts/qa-v2.79-news-precision.ts",
+    "qa:real-news-golden": "node --experimental-strip-types scripts/qa-v2.80-real-news-golden.ts",
+    "qa:hard-negatives": "node --experimental-strip-types scripts/qa-v2.81-hard-negatives.ts",
+    "qa:false-negatives": "node --experimental-strip-types scripts/qa-v2.82-false-negatives.ts",
+    "qa:early-escalation": "node --experimental-strip-types scripts/qa-v2.83-early-escalation.ts",
+    "qa:cross-signal": "node --experimental-strip-types scripts/qa-v2.84-cross-signal-escalation.ts",
+    "qa:cross-signal-identity": "node --experimental-strip-types scripts/qa-v2.85-cross-signal-identity.ts",
+    "qa:case-identity-confidence": "node --experimental-strip-types scripts/qa-v2.86-case-identity-confidence.ts",
+    "qa:ambiguous-holding": "node --experimental-strip-types scripts/qa-v2.87-ambiguous-case-holding.ts",
+    "qa:persistent-ambiguous": "node --experimental-strip-types scripts/qa-v2.88-persistent-ambiguous-candidates.ts",
+    "qa:persistent-reevaluation": "node --experimental-strip-types scripts/qa-v2.89-persistent-candidate-reevaluation.ts",
+    "qa:strategic-delta": "node --experimental-strip-types scripts/qa-v2.90-strategic-delta.ts",
+    "qa:competitor-change-profile": "node --experimental-strip-types scripts/qa-v2.91-competitor-change-profile.ts",
+    "qa:watch-questions": "node --experimental-strip-types scripts/qa-v2.94-watch-questions.ts",
+    "qa:news-reach": "node --experimental-strip-types scripts/qa-v2.95-news-reach.ts",
+    "qa:regional-news": "node --experimental-strip-types scripts/qa-v2.96-swedish-regional-news.ts",
+    "qa:regional-media": "node --experimental-strip-types scripts/qa-v2.97-regional-media.ts",
+    "qa:procurement-reach": "node --experimental-strip-types scripts/qa-v2.98-procurement-award-reach.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

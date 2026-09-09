@@ -8,15 +8,23 @@ export type SourceNetworkSummary = {
   tier1:number;
   tier2:number;
   tier3:number;
+  regionalCoverage:Record<string,number>;
+  publisherGroups:Record<string,number>;
+  independentPublisherGroups:number;
 };
 
 export function summarizeSourceNetwork(sources:WatchSource[]):SourceNetworkSummary{
   const enabled=sources.filter(s=>s.enabled);
   const byScope:Record<SourceScope,number>={sweden:0,nordic:0,eu:0,international:0};
   const byType:Partial<Record<SourceType,number>>={};
+  const regionalCoverage:Record<string,number>={};
+  const publisherGroups:Record<string,number>={};
   for(const source of enabled){
     byScope[source.scope]+=1;
     byType[source.type]=(byType[source.type]??0)+1;
+    for(const region of source.regions??[]) regionalCoverage[region]=(regionalCoverage[region]??0)+1;
+    const publisherKey=source.publisherGroup??source.id;
+    publisherGroups[publisherKey]=(publisherGroups[publisherKey]??0)+1;
   }
   return {
     total:sources.length,
@@ -26,6 +34,9 @@ export function summarizeSourceNetwork(sources:WatchSource[]):SourceNetworkSumma
     tier1:enabled.filter(s=>s.tier===1).length,
     tier2:enabled.filter(s=>s.tier===2).length,
     tier3:enabled.filter(s=>s.tier===3).length,
+    regionalCoverage,
+    publisherGroups,
+    independentPublisherGroups:Object.keys(publisherGroups).length,
   };
 }
 

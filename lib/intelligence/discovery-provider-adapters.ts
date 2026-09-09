@@ -5,10 +5,22 @@ function text(value:unknown){return typeof value==='string'?value:'';}
 function htmlToText(value:string){
   return value.replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim();
 }
-function dateOrNull(value:unknown){
+function dateOrNull(value:unknown,now=new Date()){
   if(typeof value!=='string'||!value.trim())return null;
-  const d=new Date(value);
-  return Number.isNaN(d.getTime())?null:d.toISOString();
+  const raw=value.trim();
+  const d=new Date(raw);
+  if(!Number.isNaN(d.getTime()))return d.toISOString();
+  // Search APIs sometimes return relative ages instead of ISO timestamps.
+  const m=raw.toLocaleLowerCase('en-US').match(/^(?:about\s+)?(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago$/);
+  if(!m)return null;
+  const n=Number(m[1]); const unit=m[2]; const copy=new Date(now);
+  if(unit==='minute')copy.setMinutes(copy.getMinutes()-n);
+  else if(unit==='hour')copy.setHours(copy.getHours()-n);
+  else if(unit==='day')copy.setDate(copy.getDate()-n);
+  else if(unit==='week')copy.setDate(copy.getDate()-(n*7));
+  else if(unit==='month')copy.setMonth(copy.getMonth()-n);
+  else if(unit==='year')copy.setFullYear(copy.getFullYear()-n);
+  return copy.toISOString();
 }
 
 export class BraveSearchProvider implements DiscoveryProvider{
@@ -20,7 +32,8 @@ export class BraveSearchProvider implements DiscoveryProvider{
     url.searchParams.set('q',query.query);
     url.searchParams.set('country',this.options.country??'SE');
     url.searchParams.set('search_lang',this.options.searchLang??'sv');
-    url.searchParams.set('count',String(Math.max(1,Math.min(20,this.options.count??8))));
+    url.searchParams.set('count',String(Math.max(1,Math.min(20,this.options.count??10))));
+    url.searchParams.set('freshness','pm');
     const response=await fetch(url,{
       method:'GET',
       headers:{Accept:'application/json','X-Subscription-Token':this.apiKey},

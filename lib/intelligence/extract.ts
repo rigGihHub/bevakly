@@ -1,4 +1,4 @@
-import { wasteKeywords, type WatchSource } from "./sources";
+import { wasteDiscoveryKeywords, type WatchSource } from "./sources";
 
 export type ExtractedLink = { title: string; url: string };
 
@@ -25,7 +25,7 @@ export function extractRelevantLinks(html: string, source: WatchSource): Extract
     const title = cleanText(match[2]);
     if (title.length < 18 || title.length > 180) continue;
     const lower = title.toLocaleLowerCase("sv-SE");
-    if (!wasteKeywords.some((keyword) => lower.includes(keyword))) continue;
+    if (!wasteDiscoveryKeywords.some((keyword) => lower.includes(keyword))) continue;
     const url = absoluteUrl(match[1], source);
     if (!url || !url.startsWith("http")) continue;
     links.push({ title, url });
@@ -33,5 +33,5 @@ export function extractRelevantLinks(html: string, source: WatchSource): Extract
 
   const unique = new Map<string, ExtractedLink>();
   for (const link of links) unique.set(`${link.title}|${link.url}`, link);
-  return [...unique.values()].slice(0, 18);
+  return [...unique.values()].slice(0, 32);
 }

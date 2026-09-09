@@ -1,0 +1,10 @@
+import { strict as assert } from 'node:assert';
+import { analyzeWebsiteChange, classifyWebsiteChange, extractWebsiteDiff } from '../lib/intelligence/competitor-website-monitor';
+const before='Vi erbjuder återvinning i Sverige. Kontakta oss för mer information.';
+const after='Vi erbjuder återvinning i Sverige. Ny anläggning i Örebro ökar vår kapacitet. Investering 50 miljoner kronor.';
+const a=analyzeWebsiteChange(before,after);
+assert(a.addedSnippets.some(x=>x.includes('Ny anläggning')));
+assert(a.dimensions.includes('capacity'));assert(a.dimensions.includes('investment'));assert.equal(a.importance,'high');
+assert.deepEqual(classifyWebsiteChange('Vi byter färg på sidfoten.'),[]);
+const noise=extractWebsiteDiff('Öppet 08:00. Välkommen till oss.','Öppet 09:00. Välkommen till oss.');assert.equal(noise.added.length,0);
+console.log('v2.93 website change intelligence: PASS');

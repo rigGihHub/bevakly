@@ -1,0 +1,9 @@
+import {assessBidNewsRelevance} from '../lib/intelligence/bid-news-relevance.ts';
+import {assessEarlySignalEscalation,type EarlySignalStage} from '../lib/intelligence/early-signal-escalation.ts';
+import {falseNegativeFixtures} from './false-negative-fixtures.ts';
+const expected:Record<string,EarlySignalStage>={
+ 'fn-land-option':'weak-signal','fn-plan-start':'decision','fn-consultation':'formal-process','fn-permit-request':'formal-process','fn-permit-scope':'formal-process','fn-building':'decision','fn-lease':'weak-signal','fn-land-purchase':'decision','fn-zoning':'decision','fn-recruit-plant':'weak-signal','fn-recruit-team':'execution','fn-fleet':'weak-signal','fn-equipment':'execution','fn-shift':'execution','fn-storage':'decision','fn-transfer':'execution','fn-municipal-intent':'decision','fn-contract-expiry':'formal-process','fn-budget-proc':'decision','fn-proc-cancel':'decision','fn-proc-appeal':'formal-process','fn-price-letter':'execution','fn-material-rebate':'execution','fn-gatefee':'execution','fn-owner':'decision','fn-board':'decision','fn-partnership':'execution','fn-route':'execution','fn-close':'execution','fn-fire-capacity':'execution','fn-court':'decision','fn-rule-proposal':'decision'};
+let pass=0;
+for(const f of falseNegativeFixtures){const e=assessEarlySignalEscalation(f); const bid=assessBidNewsRelevance({title:f.title,text:f.text,competitors:f.competitors??[],geographies:f.geographies??[],sourceType:f.sourceType}); const ok=e.stage===expected[f.id] && (e.stage!=='weak-signal'||bid.score<=69); if(ok)pass++; else console.log('FAIL',f.id,{expected:expected[f.id],got:e.stage,bid:bid.score,tier:bid.tier});}
+if(pass!==falseNegativeFixtures.length) throw new Error(`${pass}/${falseNegativeFixtures.length} escalation fixtures passed`);
+console.log(`PASS ${pass}/${falseNegativeFixtures.length} early-signal escalation fixtures`);
