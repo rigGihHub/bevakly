@@ -52,7 +52,7 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.97.0</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.99.0</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
