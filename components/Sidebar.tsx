@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Binoculars, Building2, Gauge, Radar, Settings2, TrendingUp } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 const items = [
   [Gauge, "Översikt", "top"],
@@ -50,7 +51,7 @@ export default function Sidebar() {
       </nav>
       <div className="sidebarFooter">
         <div className="profileDot">B</div>
-        <div><strong>Bevakly</strong><span>Omvärldsbevakning · v2.16.0</span></div>
+        <div><strong>Bevakly</strong><span>Omvärldsbevakning · v{APP_VERSION}</span></div>
       </div>
     </aside>
   );

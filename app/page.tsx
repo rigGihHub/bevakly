@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Building2, Newspaper, Radar, Search, Sparkles, TrendingUp } from "lucide-react";
+import { Bell, Building2, Newspaper, Radar, RefreshCw, Search, Sparkles, TrendingUp } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import IndustryFeed from "@/components/IndustryFeed";
@@ -13,6 +13,7 @@ import ActorWatchlist from "@/components/ActorWatchlist";
 import ActorComparison from "@/components/ActorComparison";
 import StrategicMoves from "@/components/StrategicMoves";
 import CompetitorNow from "@/components/CompetitorNow";
+import { APP_VERSION } from "@/lib/version";
 
 type Track = "industry" | "competitors";
 
@@ -22,6 +23,8 @@ export default function Home() {
   const [activeProfileId,setActiveProfileId]=useState('');
   const [track,setTrack]=useState<Track>('industry');
   const [ready,setReady]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
+  const [lastRefresh,setLastRefresh]=useState<string|null>(null);
 
   useEffect(()=>{
     try{
@@ -32,6 +35,14 @@ export default function Home() {
   },[]);
   useEffect(()=>{if(!ready||!profiles.length)return;try{localStorage.setItem('bevakly:watch-profiles:v1',JSON.stringify(profiles));localStorage.setItem('bevakly:active-profile:v1',activeProfileId||profiles[0].id)}catch{}},[profiles,activeProfileId,ready]);
   useEffect(()=>{
+    try{setLastRefresh(localStorage.getItem('bevakly:last-refresh:v1'))}catch{}
+    const onRefreshDone=(event:Event)=>{const detail=(event as CustomEvent<{fetchedAt?:string}>).detail; const ts=detail?.fetchedAt||new Date().toISOString(); setLastRefresh(ts); setRefreshing(false); try{localStorage.setItem('bevakly:last-refresh:v1',ts)}catch{}};
+    const onRefreshError=()=>setRefreshing(false);
+    window.addEventListener('bevakly:refresh-done',onRefreshDone);
+    window.addEventListener('bevakly:refresh-error',onRefreshError);
+    return ()=>{window.removeEventListener('bevakly:refresh-done',onRefreshDone);window.removeEventListener('bevakly:refresh-error',onRefreshError)};
+  },[]);
+  useEffect(()=>{
     const onTrack=(event:Event)=>{
       const detail=(event as CustomEvent<Track>).detail;
       if(detail==='industry'||detail==='competitors') setTrack(detail);
@@ -39,6 +50,13 @@ export default function Home() {
     window.addEventListener('bevakly:track',onTrack);
     return ()=>window.removeEventListener('bevakly:track',onTrack);
   },[]);
+
+  const refreshAll=()=>{
+    if(refreshing)return;
+    setRefreshing(true);
+    setTrack('industry');
+    window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80);
+  };
 
   const completeOnboarding=(sel:OnboardingSelection)=>{
     const initial=makeWatchProfile({name:`${sel.industry==='waste'?'Avfall Sverige':'Min bevakning'}`,industry:sel.industry,customIndustry:sel.customIndustry,market:sel.market,regions:sel.regions.split(',').map(x=>x.trim()).filter(Boolean),actors:sel.competitors});
@@ -52,7 +70,7 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v2.99.0</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button><Search size={18}/></button><button><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v{APP_VERSION}</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information från källorna"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera bevakning'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta färsk info nu'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
