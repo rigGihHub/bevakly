@@ -4,15 +4,9 @@ import { useEffect, useState } from "react";
 import { Bell, Building2, Newspaper, Radar, RefreshCw, Search, Sparkles, TrendingUp } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
-import IndustryFeed from "@/components/IndustryFeed";
+import NewsFirstFeed from "@/components/NewsFirstFeed";
 import WatchProfiles from "@/components/WatchProfiles";
 import { makeWatchProfile, type WatchProfile } from "@/lib/intelligence/watch-profiles";
-import ExecutiveIntelligence from "@/components/ExecutiveIntelligence";
-import CompetitorIntelligence from "@/components/CompetitorIntelligence";
-import ActorWatchlist from "@/components/ActorWatchlist";
-import ActorComparison from "@/components/ActorComparison";
-import StrategicMoves from "@/components/StrategicMoves";
-import CompetitorNow from "@/components/CompetitorNow";
 import { APP_VERSION } from "@/lib/version";
 
 type Track = "industry" | "competitors";
@@ -43,21 +37,12 @@ export default function Home() {
     return ()=>{window.removeEventListener('bevakly:refresh-done',onRefreshDone);window.removeEventListener('bevakly:refresh-error',onRefreshError)};
   },[]);
   useEffect(()=>{
-    const onTrack=(event:Event)=>{
-      const detail=(event as CustomEvent<Track>).detail;
-      if(detail==='industry'||detail==='competitors') setTrack(detail);
-    };
+    const onTrack=(event:Event)=>{const detail=(event as CustomEvent<Track>).detail;if(detail==='industry'||detail==='competitors')setTrack(detail)};
     window.addEventListener('bevakly:track',onTrack);
     return ()=>window.removeEventListener('bevakly:track',onTrack);
   },[]);
 
-  const refreshAll=()=>{
-    if(refreshing)return;
-    setRefreshing(true);
-    setTrack('industry');
-    window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80);
-  };
-
+  const refreshAll=()=>{if(refreshing)return;setRefreshing(true);window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80)};
   const completeOnboarding=(sel:OnboardingSelection)=>{
     const initial=makeWatchProfile({name:`${sel.industry==='waste'?'Avfall Sverige':'Min bevakning'}`,industry:sel.industry,customIndustry:sel.customIndustry,market:sel.market,regions:sel.regions.split(',').map(x=>x.trim()).filter(Boolean),actors:sel.competitors});
     setSelection(sel);setProfiles([initial]);setActiveProfileId(initial.id);
@@ -70,41 +55,26 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v{APP_VERSION}</p><h1>Vad händer i branschen?</h1><p>Följ nyhetsläget eller växla över till en samlad analys av vad konkurrenterna faktiskt håller på med.</p></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information från källorna"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera bevakning'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta färsk info nu'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v{APP_VERSION}</p><h1>Vad händer i branschen?</h1><p>Färska nyheter först. Fördjupning kommer efter att nyhetsflödet faktiskt levererat.</p></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information från källorna"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera bevakning'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta färsk info nu'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
       <section className="statusStrip">
         <div><span className="statusIcon"><Radar size={18}/></span><p><strong>{activeProfile.name}</strong><span>{activeProfile.market} · {activeProfile.themes.slice(0,2).join(' · ')||'bred bevakning'}</span></p></div>
-        <div><span className="statusIcon"><TrendingUp size={18}/></span><p><strong>Automatisk bevakning</strong><span>riktiga källor · uppdateras dagligen</span></p></div>
-        <div><span className="statusIcon"><Sparkles size={18}/></span><p><strong>Relevant först</strong><span>nyheter, signaler och mönster samlade</span></p></div>
+        <div><span className="statusIcon"><TrendingUp size={18}/></span><p><strong>Färskdata</strong><span>7 dagar · manuellt uppdateringsbar</span></p></div>
+        <div><span className="statusIcon"><Sparkles size={18}/></span><p><strong>Nyheter först</strong><span>diagnostik bara när den behövs</span></p></div>
       </section>
 
       <section className="trackSwitcher" aria-label="Välj bevakningsspår">
         <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}>
-          <Newspaper size={22}/><span><strong>Branschen</strong><small>Generella nyheter, regler, teknik, investeringar och marknadsförändringar.</small></span>
+          <Newspaper size={22}/><span><strong>Branschen</strong><small>Senaste relevanta branschnyheterna.</small></span>
         </button>
         <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}>
-          <Building2 size={22}/><span><strong>Konkurrenterna</strong><small>Vad de gör, vad som förändras och vilka mönster Bevakly ser.</small></span>
+          <Building2 size={22}/><span><strong>Konkurrenterna</strong><small>Senaste nytt om bolagen du bevakar.</small></span>
         </button>
       </section>
 
-      {track==='industry' ? <>
-        <div id="industry-feed" className="navAnchor"><IndustryFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} /></div>
-        <details className="analysisDrawer" id="signals">
-          <summary><span><strong>Fördjupa branschbilden</strong><small>Trender, svaga signaler, motbevis och utveckling över tid.</small></span><span className="analysisDrawerAction">Fördjupa</span></summary>
-          <div className="analysisDrawerBody"><ExecutiveIntelligence industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} /></div>
-        </details>
-      </> : <section id="actors" className="competitorTrack navAnchor">
-        <div className="trackIntro"><p className="eyebrow">KONKURRENTANALYS</p><h2>Vad håller konkurrenterna på med?</h2><p>Bevakly samlar händelser per aktör och letar efter förändringar i aktivitet, teman, geografi och möjliga strategiska förflyttningar. Hypoteser hålls tydligt isär från fakta.</p></div>
-        {activeProfile.actors.length>0 ? <>
-          <CompetitorNow actors={activeProfile.actors} />
-          <ActorWatchlist actors={activeProfile.actors} />
-          {activeProfile.actors.length>1&&<ActorComparison actors={activeProfile.actors} />}
-          {activeProfile.industry==="waste"&&<CompetitorIntelligence />}
-          <div id="strategic-moves"><StrategicMoves actors={activeProfile.actors} /></div>
-        </> : <div className="emptyTrack"><Building2 size={24}/><strong>Inga konkurrenter valda ännu</strong><p>Lägg till företag under Bevakningar så bygger Bevakly konkurrentanalysen här.</p></div>}
-      </section>}
+      <div className="navAnchor"><NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track}/></div>
     </main>
   </div>;
 }
