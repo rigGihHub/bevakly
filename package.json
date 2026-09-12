@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "2.99.1",
+  "version": "3.07.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,7 +24,16 @@
     "qa:news-reach": "node --experimental-strip-types scripts/qa-v2.95-news-reach.ts",
     "qa:regional-news": "node --experimental-strip-types scripts/qa-v2.96-swedish-regional-news.ts",
     "qa:regional-media": "node --experimental-strip-types scripts/qa-v2.97-regional-media.ts",
-    "qa:procurement-reach": "node --experimental-strip-types scripts/qa-v2.98-procurement-award-reach.ts"
+    "qa:procurement-reach": "node --experimental-strip-types scripts/qa-v2.98-procurement-award-reach.ts",
+    "qa:coverage-gap-discovery": "node --experimental-strip-types scripts/qa-v3.00.1-coverage-gap-discovery.ts",
+    "qa:self-learning-coverage": "node --experimental-strip-types scripts/qa-v3.00.2-self-learning-coverage.ts",
+    "qa:coverage-source-advisor": "node --experimental-strip-types scripts/qa-v3.00.3-coverage-source-advisor.ts",
+    "qa:coverage-crawl-budget": "node --experimental-strip-types scripts/qa-v3.00.4-coverage-crawl-budget.ts",
+    "qa:source-health-wiring": "node --experimental-strip-types scripts/qa-v3.00.4-source-health-wiring.ts",
+    "qa:crawl-budget-audit": "node --experimental-strip-types scripts/qa-v3.00.5-crawl-budget-audit.ts",
+    "qa:coverage-budget-history": "node --experimental-strip-types scripts/qa-v3.01.0-coverage-budget-history.ts",
+    "qa:competitor-news-desk": "node --experimental-strip-types scripts/qa-v3.02-competitor-news-desk.ts",
+    "qa:competitor-news-hubs": "node --experimental-strip-types scripts/qa-v3.05-competitor-news-hubs.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

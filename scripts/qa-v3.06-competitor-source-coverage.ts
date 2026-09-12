@@ -1,0 +1,14 @@
+import { OFFICIAL_COMPETITOR_SOURCES, officialSourceCoverage } from '../lib/intelligence/competitor-official-sources';
+import { wasteSources } from '../lib/intelligence/sources';
+const req=['PreZero','Ragn-Sells','Stena Recycling','REMONDIS','Verdis','Ohlssons'];
+let pass=0; const assert=(x:boolean,m:string)=>{if(!x)throw new Error(m);pass++};
+assert(OFFICIAL_COMPETITOR_SOURCES.length===6,'six competitors');
+assert(OFFICIAL_COMPETITOR_SOURCES.every(x=>req.includes(x.competitor)),'known competitors');
+const pre=wasteSources.find(x=>x.id==='prezero-news');
+assert(pre?.listingUrl==='https://www.prezero.se/mina-sidor/nyheter/','PreZero Swedish URL');
+const c=officialSourceCoverage(req);
+assert(c.watched===6,'coverage six');
+assert(c.withOfficialNews===5,'five verified official news pages');
+assert(c.withCareerSource===5,'five verified career pages');
+assert(c.missingOfficialNews.includes('REMONDIS')&&c.missingCareerSource.includes('Ohlssons'),'explicit gaps');
+console.log(`${pass}/7 PASS`);

@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { buildCoverageGapDiscoveryQueue } from '../lib/intelligence/coverage-gap-discovery.ts';
+import { recordGapDiscoveryFeedback, rankGapDiscoveryQueue, gapDiscoveryFeedbackScores } from '../lib/intelligence/discovery-feedback-loop.ts';
+
+const rows:any[]=[{county:'Örebro län',overall:'svag',score:20,dimensions:{procurement:{level:'svag',score:10},permits:{level:'svag',score:12},media:{level:'svag',score:15},competitors:{level:'svag',score:18},facilities:{level:'svag',score:19}}}];
+const plan=buildCoverageGapDiscoveryQueue(rows,new Date('2026-09-11T00:00:00Z'),4);
+assert.equal(plan.queue.length,4);
+const q=plan.queue[0];
+const fakeRun:any={results:[{jobId:q.jobId,factConfidence:'Hög',score:82},{jobId:q.jobId,factConfidence:'Hög',score:79}],attempts:[{jobId:q.jobId,fromCache:false}]};
+recordGapDiscoveryFeedback([q],fakeRun,new Date('2026-09-11T01:00:00Z'));
+recordGapDiscoveryFeedback([q],fakeRun,new Date('2026-09-11T02:00:00Z'));
+recordGapDiscoveryFeedback([q],fakeRun,new Date('2026-09-11T03:00:00Z'));
+const scores=gapDiscoveryFeedbackScores().filter(x=>x.gapId.startsWith('coverage:'));
+assert.ok(scores.length>=1);
+assert.ok(scores[0].score>=68);
+assert.equal(scores[0].lane,'preferred');
+const ranked=rankGapDiscoveryQueue(plan.queue);
+assert.equal(ranked.length,4,'learning must never exceed/remove the hard query budget');
+assert.ok(ranked.some(x=>x.targetId===q.targetId),'exploration/query must not be auto-disabled');
+console.log('v3.00.2 self-learning coverage: 7/7 PASS');

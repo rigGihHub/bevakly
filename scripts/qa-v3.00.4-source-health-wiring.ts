@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+let pass=0; const test=(ok:boolean,msg:string)=>{if(!ok)throw new Error(msg);pass++;};
+const adaptive=fs.readFileSync('lib/intelligence/adaptive-source-crawl.ts','utf8');
+const route=fs.readFileSync('app/api/industry-feed/route.ts','utf8');
+const server=fs.readFileSync('lib/server/source-health-learning.ts','utf8');
+test(adaptive.includes('export type AdaptiveSourcePersistentState'),'persistent state type must exist');
+test(adaptive.includes('export function hydrateAdaptiveSourceState'),'persistent history must hydrate adaptive runtime');
+test(adaptive.includes('export function adaptiveSourceHealthHistory'),'source health diagnostics must be visible');
+test(route.includes('loadPersistentSourceHealth()')&&route.includes('hydrateAdaptiveSourceState('),'route must load persistent source health before planning');
+test(route.includes('persistSourceHealthOutcomes(adaptiveOutcomes,fetchedAt)'),'route must persist outcomes after crawl');
+test(route.includes('buildCoverageCrawlHints(')&&route.includes('buildAdaptiveSourcePlan(enabledSources,new Date(fetchedAt),coverageCrawlHints)'),'coverage hints must influence the crawl plan');
+test(server.includes('BEVAKLY_SOURCE_HEALTH_LEARNING_ENABLED'),'persistence remains feature-gated');
+console.log(`Source-health wiring QA: ${pass}/7 PASS`);

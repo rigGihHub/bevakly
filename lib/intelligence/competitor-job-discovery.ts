@@ -1,4 +1,5 @@
 import type { DiscoveryProviderQuery } from './discovery-provider';
+import { normalizeCompetitorWatchlist } from './competitor-news-discovery';
 
 export type VerifiedCompetitorCareerSource={competitor:string;id:string;hosts:string[];careerUrl:string;signalRoles:string[]};
 
@@ -13,9 +14,10 @@ export const verifiedCompetitorCareerSources:VerifiedCompetitorCareerSource[]=[
 
 function hash(v:string){let h=2166136261;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 
-export function buildCompetitorJobQueue(now=new Date(),maxQueries=3):DiscoveryProviderQuery[]{
+export function buildCompetitorJobQueue(actors:string[]|null|undefined,now=new Date(),maxQueries=3):DiscoveryProviderQuery[]{
   const day=now.toISOString().slice(0,10);
-  const ordered=[...verifiedCompetitorCareerSources].sort((a,b)=>(hash(`${day}|${a.id}`)-hash(`${day}|${b.id}`))||a.id.localeCompare(b.id));
+  const watched=new Set(normalizeCompetitorWatchlist(actors,6).map(x=>x.toLocaleLowerCase('sv-SE')));
+  const ordered=verifiedCompetitorCareerSources.filter(x=>watched.has(x.competitor.toLocaleLowerCase('sv-SE'))).sort((a,b)=>(hash(`${day}|${a.id}`)-hash(`${day}|${b.id}`))||a.id.localeCompare(b.id));
   return ordered.slice(0,Math.max(0,Math.min(ordered.length,Math.floor(maxQueries)))).map(source=>({
     jobId:`${day}:competitor-jobs:${source.id}`,
     targetId:`competitor-jobs:${source.id}`,
@@ -28,7 +30,7 @@ export function buildCompetitorJobQueue(now=new Date(),maxQueries=3):DiscoveryPr
   }));
 }
 
-export function summarizeCompetitorJobDiscovery(queue:DiscoveryProviderQuery[]){return {enabled:true,verificationMode:'official-career-host-allowlist',verifiedCompetitors:verifiedCompetitorCareerSources.length,careerSources:verifiedCompetitorCareerSources.map(x=>({competitor:x.competitor,careerUrl:x.careerUrl,hosts:x.hosts})),queuedQueries:queue.length,automaticDomainGuessing:false,interpretation:'Job ads are weak signals alone; clusters by role, geography and time become stronger when corroborated by other source classes.'};}
+export function summarizeCompetitorJobDiscovery(queue:DiscoveryProviderQuery[],actors:string[]|null|undefined){const watched=normalizeCompetitorWatchlist(actors,6); const watchedSet=new Set(watched.map(x=>x.toLocaleLowerCase('sv-SE'))); const sources=verifiedCompetitorCareerSources.filter(x=>watchedSet.has(x.competitor.toLocaleLowerCase('sv-SE'))); return {enabled:true,watchedActors:watched,verificationMode:'official-career-host-allowlist',verifiedCompetitors:sources.length,careerSources:sources.map(x=>({competitor:x.competitor,careerUrl:x.careerUrl,hosts:x.hosts})),queuedQueries:queue.length,automaticDomainGuessing:false,interpretation:'Job ads are weak signals alone; clusters by role, geography and time become stronger when corroborated by other source classes.'};}
 
 export function classifyJobSignal(text:string){
   const t=text.toLocaleLowerCase('sv-SE');

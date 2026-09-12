@@ -56,7 +56,8 @@ const MAX_WEIGHT=24;
 function norm(v:string){return v.toLocaleLowerCase('sv-SE').replace(/\s+/g,' ').trim();}
 function queryPattern(q:DiscoveryProviderQuery){
   const hosts=(q.allowedHosts??[]).map(norm).sort();
-  const gapId=q.targetId.split(':')[1]??'unknown';
+  const parts=q.targetId.split(':');
+  const gapId=parts[0]==='coverage-gap'&&parts.length>=3?`coverage:${parts[1]}:${parts[2]}`:(parts[1]??'unknown');
   return {
     gapId,
     sourceClass:q.sourceClass??'unknown',

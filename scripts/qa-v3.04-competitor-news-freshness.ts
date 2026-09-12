@@ -1,0 +1,11 @@
+import { strict as assert } from 'node:assert';
+import { buildCompetitorNewsDesk, buildCompetitorNewsDelta, snapshotCompetitorNewsDesk } from '../lib/intelligence/competitor-news-desk.ts';
+const base=buildCompetitorNewsDesk({actors:['PreZero','Ragn-Sells'],fixed:[{title:'A',url:'https://example.se/a?utm_source=x',source:'X',publishedAt:'2026-09-11T10:00:00Z',category:'upphandling',score:80,competitors:['PreZero'],origin:'fixed'}],discovery:[],maxPerActor:4});
+const first=buildCompetitorNewsDelta(base,null);
+assert.equal(first.hasBaseline,false); assert.equal(first.totalNew,0);
+const snap=snapshotCompetitorNewsDesk(base);
+const next=buildCompetitorNewsDesk({actors:['PreZero','Ragn-Sells'],fixed:[{title:'A',url:'https://www.example.se/a',source:'X',publishedAt:'2026-09-11T10:00:00Z',category:'upphandling',score:80,competitors:['PreZero'],origin:'fixed'},{title:'B',url:'https://example.se/b',source:'Y',publishedAt:'2026-09-11T12:00:00Z',category:'tillstånd',score:85,competitors:['PreZero'],origin:'fixed'}],discovery:[{title:'C',url:'https://local.se/c',source:'Z',publishedAt:'2026-09-11T13:00:00Z',category:'investering',score:82,competitors:['Ragn Sells'],origin:'discovery'}],maxPerActor:4});
+const delta=buildCompetitorNewsDelta(next,snap);
+assert.equal(delta.hasBaseline,true); assert.equal(delta.totalNew,2); assert.equal(delta.byActor['PreZero'].length,1); assert.equal(delta.byActor['Ragn-Sells'].length,1); assert.ok(!delta.byActor['PreZero'].includes('https://example.se/a'));
+const snap2=snapshotCompetitorNewsDesk(next); const delta2=buildCompetitorNewsDelta(next,snap2); assert.equal(delta2.totalNew,0);
+console.log('v3.04 competitor news freshness: 7/7 PASS');
