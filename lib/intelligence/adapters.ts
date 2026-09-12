@@ -47,7 +47,11 @@ export function extractSourceCandidates(html:string, source:WatchSource, keyword
   let match:RegExpExecArray|null;
   while((match=re.exec(html))){
     const title=clean(match[2]);
-    if(title.length<18 || title.length>190 || (activeKeywords.length>0 && !relevant(title,activeKeywords))) continue;
+    if(title.length<18 || title.length>190) continue;
+    // Official competitor newsrooms are already constrained by source + news-like path.
+    // Requiring a generic waste keyword in every headline drops legitimate competitor news
+    // such as leadership changes, investments and contract announcements before article analysis.
+    if(source.type!=="competitor" && activeKeywords.length>0 && !relevant(title,activeKeywords)) continue;
     const url=absolute(match[1],source);
     if(!url.startsWith("http") || !allowedPath(url,source)) continue;
     result.push({title,url});

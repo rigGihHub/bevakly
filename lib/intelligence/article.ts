@@ -94,31 +94,57 @@ function extractBody(html:string,keywords:string[],jsonArticle:any):{text:string
   const keywordText=clipText(keyword);
   if(keywordText.length>=120)return {text:keywordText,method:'paragraphs-keyword'};
 
-  // Conservative fallback: only use ordinary paragraph text when the page itself is relevant by title/metadata.
   const fallback=clipText(all.slice(0,12));
   if(fallback.length>=120)return {text:fallback,method:'paragraphs-fallback'};
   return {text:'',method:'none'};
+}
+
+function parsePublishedDate(raw:string):string|null{
+  const value=clean(raw).replace(/\u00a0/g,' ').trim();
+  if(!value)return null;
+  const monthMap:Record<string,string>={
+    januari:'01',jan:'01',january:'01',
+    februari:'02',feb:'02',february:'02',
+    mars:'03',mar:'03',march:'03',
+    april:'04',apr:'04',
+    maj:'05',may:'05',
+    juni:'06',jun:'06',june:'06',
+    juli:'07',jul:'07',july:'07',
+    augusti:'08',aug:'08',august:'08',
+    september:'09',sep:'09',sept:'09',
+    oktober:'10',okt:'10',oct:'10',october:'10',
+    november:'11',nov:'11',
+    december:'12',dec:'12',
+  };
+  const lower=value.toLocaleLowerCase('sv-SE').replace(/\./g,'');
+  const named=lower.match(/(?:^|\s)(\d{1,2})\s+(januari|jan|january|februari|feb|february|mars|mar|march|april|apr|maj|may|juni|jun|june|juli|jul|july|augusti|aug|august|september|sep|sept|oktober|okt|oct|october|november|nov|december|dec)\s+(20\d{2})(?:\s+(?:kl\s*)?(\d{1,2})[:.]([0-5]\d))?/i);
+  if(named){
+    const month=monthMap[named[2]];
+    const hh=String(named[4]??12).padStart(2,'0');
+    const mm=String(named[5]??0).padStart(2,'0');
+    const d=new Date(`${named[3]}-${month}-${String(named[1]).padStart(2,'0')}T${hh}:${mm}:00Z`);
+    if(!Number.isNaN(d.getTime()))return d.toISOString();
+  }
+  const normalized=value.replace(/\//g,'-');
+  const d=new Date(normalized);
+  if(!Number.isNaN(d.getTime()))return d.toISOString();
+  return null;
 }
 
 export function extractArticle(html: string, keywords: string[] = wasteKeywords): ArticleExtraction {
   const jsonNodes=parseJsonLd(html); const jsonArticle=jsonLdArticle(jsonNodes);
   const title = meta(html, "og:title") || meta(html,'twitter:title') || clean(String(jsonArticle?.headline??'')) || firstMatch(html, [/<h1[^>]*>([\s\S]*?)<\/h1>/i, /<title[^>]*>([\s\S]*?)<\/title>/i]);
   const description = meta(html, "og:description") || meta(html,'twitter:description') || meta(html, "description") || clean(String(jsonArticle?.description??''));
-  const dateRaw = meta(html, "article:published_time") || meta(html, "date") || meta(html, "datePublished") || meta(html, "pubdate") || meta(html, "publish-date") || clean(String(jsonArticle?.datePublished??jsonArticle?.dateCreated??'')) || firstMatch(html, [
+  const dateRaw = meta(html, "article:published_time") || meta(html, "date") || meta(html, "datePublished") || meta(html, "pubdate") || meta(html, "publish-date") || meta(html,"dc.date") || meta(html,"dcterms.date") || clean(String(jsonArticle?.datePublished??jsonArticle?.dateCreated??'')) || firstMatch(html, [
     /<time[^>]+datetime=["']([^"']+)["']/i,
+    /<time\b[^>]*>([\s\S]*?)<\/time>/i,
     /"datePublished"\s*:\s*"([^"]+)"/i,
     /"dateCreated"\s*:\s*"([^"]+)"/i,
     /"uploadDate"\s*:\s*"([^"]+)"/i,
-    /(?:publicerad|publicerat|published|uppdaterad)\s*(?:den)?\s*:?\s*(\d{1,2}\s+(?:januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+20\d{2})/i,
-    /(?:publicerad|published|uppdaterad)\s*(?:den)?\s*:?\s*(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2})/i,
+    /(?:publicerad|publicerat|published|publish date|uppdaterad|datum)\s*(?:den)?\s*:?\s*(\d{1,2}\s+(?:januari|jan\.?|februari|feb\.?|mars|mar\.?|april|apr\.?|maj|juni|jun\.?|juli|jul\.?|augusti|aug\.?|september|sep\.?|sept\.?|oktober|okt\.?|november|nov\.?|december|dec\.?)\s+20\d{2}(?:\s+(?:kl\s*)?\d{1,2}[:.]\d{2})?)/i,
+    /(?:publicerad|published|publish date|uppdaterad|datum)[^0-9]{0,30}(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)/i,
   ]);
-  let publishedAt: string | null = null;
-  if (dateRaw) {
-    const months:Record<string,string>={januari:'01',februari:'02',mars:'03',april:'04',maj:'05',juni:'06',juli:'07',augusti:'08',september:'09',oktober:'10',november:'11',december:'12'};
-    const sw=dateRaw.toLocaleLowerCase('sv-SE').match(/(\d{1,2})\s+(januari|februari|mars|april|maj|juni|juli|augusti|september|oktober|november|december)\s+(20\d{2})/);
-    const normalized=sw?`${sw[3]}-${months[sw[2]]}-${String(sw[1]).padStart(2,'0')}T12:00:00Z`:dateRaw.replace(/\//g,'-');
-    const d = new Date(normalized); if (!Number.isNaN(d.getTime())) publishedAt = d.toISOString();
-  }
+  const publishedAt=parsePublishedDate(dateRaw);
   const body=extractBody(html,keywords,jsonArticle);
   const metadataOnly=!body.text&&(description.length>=80);
   const textSample=body.text||(metadataOnly?description.slice(0,1600):'');
