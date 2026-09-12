@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.09.0",
+  "version": "3.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -34,7 +34,8 @@
     "qa:coverage-budget-history": "node --experimental-strip-types scripts/qa-v3.01.0-coverage-budget-history.ts",
     "qa:competitor-news-desk": "node --experimental-strip-types scripts/qa-v3.02-competitor-news-desk.ts",
     "qa:competitor-news-hubs": "node --experimental-strip-types scripts/qa-v3.05-competitor-news-hubs.ts",
-    "qa:intake-recovery": "node --experimental-strip-types scripts/qa-v3.09-intake-recovery.ts"
+    "qa:intake-recovery": "node --experimental-strip-types scripts/qa-v3.09-intake-recovery.ts",
+    "qa:balanced-intake": "node --experimental-strip-types scripts/qa-v3.10-balanced-intake.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
