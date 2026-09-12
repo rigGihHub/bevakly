@@ -6,7 +6,8 @@ import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 
 type NewsItem={title:string;url:string;source:string;publishedAt:string;category?:string;importance?:string;factualSummary?:string;competitors?:string[];score?:number;status?:string};
 type IntakeDiagnostics={fixed?:{rawCandidates?:number;clustersConsidered?:number;articleReadAttempted?:number;articleReadFailed?:number;missingOrInvalidDate?:number;outsideSelectedPeriod?:number;acceptedInPeriod?:number};discovery?:{processedResults?:number;accepted?:number;rejected?:number;dedupeDropped?:number;rejectionReasons?:Record<string,number>}};
-type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;note?:string};
+type SourceStatus={id:string;name:string;type:string;hits:number;ok:boolean;runHealth?:string};
+type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
 function analysis(item:NewsItem){
@@ -49,6 +50,13 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
   const diag=data?.newsIntakeDiagnostics;
   const raw=diag?.fixed?.rawCandidates??0,clusters=diag?.fixed?.clustersConsidered??0,accepted=diag?.fixed?.acceptedInPeriod??(data?.items?.length??0),discoveryAccepted=diag?.discovery?.accepted??(data?.discoveryResults?.length??0);
   const totalAccepted=all.length;
+  const preReviewReduction=Math.max(0,raw-clusters);
+  const sourcePressure=useMemo(()=>[...(data?.sourceStatus??[])].filter(x=>x.hits>0).sort((a,b)=>b.hits-a.hits).slice(0,8),[data?.sourceStatus]);
+  const typePressure=useMemo(()=>{
+    const totals=new Map<string,number>();
+    for(const source of data?.sourceStatus??[])totals.set(source.type,(totals.get(source.type)??0)+source.hits);
+    return [...totals.entries()].filter(([,hits])=>hits>0).sort((a,b)=>b[1]-a[1]);
+  },[data?.sourceStatus]);
   const ordered=focus==='competitors'?[['Konkurrenter',competitor],['Branschen',industryNews]] as const:[['Branschen',industryNews],['Konkurrenter',competitor]] as const;
 
   return <section id="industry-feed" style={{display:'grid',gap:16}}>
@@ -64,11 +72,14 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{raw} råa kandidater</span>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{clusters} kluster granskade</span>
+        <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{preReviewReduction} reducerade före full artikelgranskning</span>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{diag?.fixed?.articleReadFailed??0} läsfel</span>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{diag?.fixed?.missingOrInvalidDate??0} saknar datum</span>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{diag?.fixed?.outsideSelectedPeriod??0} utanför 7 dagar</span>
         <span style={{padding:'6px 9px',border:'1px solid #ddd',borderRadius:9}}>{accepted+discoveryAccepted} accepterade före visningsdedupe</span>
       </div>
+      <p style={{margin:'10px 0 0',fontSize:13,color:'#5f6b66'}}>”Reducerade före full artikelgranskning” kombinerar deduplicering och intake-taket och ska därför inte tolkas som rena kvalitetsavslag.</p>
+      {sourcePressure.length>0&&<details style={{marginTop:12}} open><summary><strong>Vilka källor fyller intake-kön?</strong></summary><div style={{marginTop:8,display:'grid',gap:6}}>{sourcePressure.map(source=><div key={source.id} style={{display:'flex',justifyContent:'space-between',gap:12,borderTop:'1px solid #eadfc9',paddingTop:6}}><span>{source.name} <small style={{color:'#6b746f'}}>({source.type})</small></span><strong>{source.hits}</strong></div>)}</div>{typePressure.length>0&&<div style={{marginTop:10,display:'flex',gap:8,flexWrap:'wrap'}}>{typePressure.map(([type,hits])=><span key={type} style={{padding:'5px 8px',border:'1px solid #ddd',borderRadius:8}}>{type}: {hits}</span>)}</div>}</details>}
       {diag?.discovery?.rejectionReasons&&<details style={{marginTop:12}}><summary>Visa discovery-avslag</summary><div style={{marginTop:8,display:'flex',gap:8,flexWrap:'wrap'}}>{Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).map(([k,v])=><span key={k} style={{padding:'5px 8px',border:'1px solid #ddd',borderRadius:8}}>{k}: {v}</span>)}</div></details>}
     </div>}
 
@@ -83,6 +94,6 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
       </article>)}</div>}
     </section>)}
 
-    {totalAccepted>0&&<details style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:12,padding:12}}><summary><strong>Intake-diagnostik</strong> – varför vissa kandidater sorterades bort</summary><div style={{marginTop:10,display:'flex',gap:8,flexWrap:'wrap'}}><span>{raw} råa kandidater</span><span>→ {clusters} kluster</span><span>→ {diag?.fixed?.articleReadAttempted??0} artiklar lästa</span><span>→ {totalAccepted} visade nyheter</span></div></details>}
+    {totalAccepted>0&&<details style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:12,padding:12}}><summary><strong>Intake-diagnostik</strong> – varför vissa kandidater sorterades bort</summary><div style={{marginTop:10,display:'flex',gap:8,flexWrap:'wrap'}}><span>{raw} råa kandidater</span><span>→ {clusters} kluster</span><span>→ {diag?.fixed?.articleReadAttempted??0} artiklar lästa</span><span>→ {totalAccepted} visade nyheter</span></div>{preReviewReduction>0&&<p style={{margin:'9px 0 0',fontSize:13,color:'#5f6b66'}}>{preReviewReduction} kandidater försvann i steget dedupe + intake-budget före full artikelgranskning. Det är en kapacitets-/urvalsindikator, inte ett bevis på låg nyhetskvalitet.</p>}{sourcePressure.length>0&&<div style={{marginTop:10}}><strong>Största kandidatproducenter:</strong> {sourcePressure.slice(0,5).map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}</details>}
   </section>
 }
