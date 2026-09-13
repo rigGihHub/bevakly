@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Binoculars, Building2, Gauge, Radar, Settings2, TrendingUp } from "lucide-react";
-import { APP_VERSION } from "@/lib/version";
+import { Building2, Gauge, Radar, Settings2 } from "lucide-react";
 
 const items = [
   [Gauge, "Översikt", "top"],
-  [Radar, "Branschflöde", "industry-feed"],
+  [Radar, "Branschen", "industry-feed"],
   [Building2, "Konkurrenter", "actors"],
-  [Binoculars, "Signaler", "signals"],
-  [TrendingUp, "Strategiska drag", "strategic-moves"],
   [Settings2, "Bevakningar", "watch-profiles"],
 ] as const;
 
@@ -29,30 +26,15 @@ export default function Sidebar() {
 
   const go=(target:string)=>{
     setActive(target);
-    const competitorTargets=["actors","strategic-moves"];
-    const industryTargets=["industry-feed","signals"];
-    if(competitorTargets.includes(target)) window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"competitors"}));
-    if(industryTargets.includes(target)) window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"industry"}));
-    window.setTimeout(()=>{
-      const el=document.getElementById(target);
-      if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
-    },50);
+    if(target==="actors") window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"competitors"}));
+    if(target==="industry-feed") window.dispatchEvent(new CustomEvent("bevakly:track",{detail:"industry"}));
+    window.setTimeout(()=>document.getElementById(target)?.scrollIntoView({behavior:"smooth",block:"start"}),50);
   };
 
-  return (
-    <aside className="sidebar">
-      <div className="brand"><span className="brandMark">B</span><span>Bevakly</span></div>
-      <nav aria-label="Huvudnavigation">
-        {items.map(([Icon,label,target])=>(
-          <a href={`#${target}`} className={active===target?"navItem active":"navItem"} key={label} onClick={(e)=>{e.preventDefault();go(target)}}>
-            <Icon size={18} strokeWidth={1.8}/><span>{label}</span>
-          </a>
-        ))}
-      </nav>
-      <div className="sidebarFooter">
-        <div className="profileDot">B</div>
-        <div><strong>Bevakly</strong><span>Omvärldsbevakning · v{APP_VERSION}</span></div>
-      </div>
-    </aside>
-  );
+  return <aside className="sidebar">
+    <div className="brand"><span className="brandMark">B</span><span>Bevakly</span></div>
+    <nav aria-label="Huvudnavigation">
+      {items.map(([Icon,label,target])=><a href={`#${target}`} className={active===target?"navItem active":"navItem"} key={label} onClick={(e)=>{e.preventDefault();go(target)}}><Icon size={18} strokeWidth={1.8}/><span>{label}</span></a>)}
+    </nav>
+  </aside>;
 }
