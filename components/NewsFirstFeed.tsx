@@ -17,6 +17,14 @@ type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];n
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
 function keyOf(item:NewsItem){return normalizeNewsKey(item.url)}
+function sortForView(items:NewsItem[],unseen:Set<string>){
+  return [...items].sort((a,b)=>{
+    const aNew=unseen.has(keyOf(a))?1:0;
+    const bNew=unseen.has(keyOf(b))?1:0;
+    if(aNew!==bNew)return bNew-aNew;
+    return new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime();
+  });
+}
 
 export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{industry:string;customIndustry?:string;profile:WatchProfile;focus:'industry'|'competitors'}){
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
@@ -69,9 +77,10 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
   const diag=data?.newsIntakeDiagnostics;
   const raw=diag?.fixed?.rawCandidates??0,clusters=diag?.fixed?.clustersConsidered??0;
   const totalAccepted=all.length;
-  const sourcePressure=useMemo(()=>[...(data?.sourceStatus??[])].filter(x=>x.hits>0).sort((a,b)=>b.hits-a.hits).slice(0,8),[data?.sourceStatus]);
+  const sourcePressure=useMemo(()=>[...(data?.sourceStatus??[])].filter(x=>x.hits>0).sort((a,b)=>b.hits-a.hits).slice(0,5),[data?.sourceStatus]);
   const label=focus==='competitors'?'Konkurrenter':'Branschen';
-  const items=focus==='competitors'?competitor:industryNews;
+  const baseItems=focus==='competitors'?competitor:industryNews;
+  const items=useMemo(()=>sortForView(baseItems,unseen),[baseItems,unseen]);
   const unreadInView=items.filter(item=>unseen.has(keyOf(item))).length;
 
   const markSeen=(keys:string[])=>{
@@ -85,6 +94,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
     {!loading&&totalAccepted===0&&<div style={{border:'1px solid #d8b36a',background:'#fffaf0',padding:12,borderRadius:12}}>
       <div style={{display:'flex',gap:8,alignItems:'center'}}><AlertTriangle size={18}/><strong>Inga nyheter hittades</strong></div>
       <p style={{margin:'6px 0 0',fontSize:13,color:'#5f6b66'}}>{raw} kandidater → {clusters} granskade.</p>
+      <details style={{marginTop:8,fontSize:12}}><summary>Tekniska detaljer</summary><div style={{marginTop:6}}>{diag?.fixed?.articleReadAttempted??0} artiklar lästa · {diag?.fixed?.articleReadFailed??0} läsfel · {diag?.fixed?.missingOrInvalidDate??0} saknade datum · {diag?.fixed?.outsideSelectedPeriod??0} utanför perioden.</div>{sourcePressure.length>0&&<div style={{marginTop:4}}>Största källor: {sourcePressure.map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}{diag?.discovery?.rejectionReasons&&<div style={{marginTop:4}}>Vanliga avslag: {Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k} ${v}`).join(' · ')}</div>}</details>
     </div>}
 
     <section id={focus==='competitors'?'actors':undefined} style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:14,padding:'12px 14px',background:'white'}}>
@@ -109,7 +119,5 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
         </article>;
       })}</div>}
     </section>
-
-    <details style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:10,padding:'9px 11px',fontSize:12}}><summary><strong>Diagnostik</strong></summary><div style={{marginTop:8,display:'flex',gap:6,flexWrap:'wrap'}}><span>{raw} kandidater</span><span>→ {clusters} kluster</span><span>→ {diag?.fixed?.articleReadAttempted??0} lästa</span><span>→ {totalAccepted} nyheter</span></div>{sourcePressure.length>0&&<div style={{marginTop:8}}><strong>Källor:</strong> {sourcePressure.slice(0,5).map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}{diag?.discovery?.rejectionReasons&&<div style={{marginTop:8}}><strong>Avslag:</strong> {Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k} ${v}`).join(' · ')}</div>}</details>
   </section>
 }
