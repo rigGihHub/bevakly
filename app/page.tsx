@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Building2, Newspaper, Radar, RefreshCw, Search, Sparkles, TrendingUp } from "lucide-react";
+import { Bell, Building2, Newspaper, RefreshCw, Search } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import NewsFirstFeed from "@/components/NewsFirstFeed";
@@ -55,22 +55,16 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · OMVÄRLDSBEVAKNING · v{APP_VERSION}</p><h1>Vad händer i branschen?</h1><p>Färska nyheter först. Fördjupning kommer efter att nyhetsflödet faktiskt levererat.</p></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information från källorna"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera bevakning'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta färsk info nu'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar"><div><p className="eyebrow">BEVAKLY · v{APP_VERSION}</p><h1>Senaste nytt</h1></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta nytt'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
-      <section className="statusStrip">
-        <div><span className="statusIcon"><Radar size={18}/></span><p><strong>{activeProfile.name}</strong><span>{activeProfile.market} · {activeProfile.themes.slice(0,2).join(' · ')||'bred bevakning'}</span></p></div>
-        <div><span className="statusIcon"><TrendingUp size={18}/></span><p><strong>Färskdata</strong><span>7 dagar · manuellt uppdateringsbar</span></p></div>
-        <div><span className="statusIcon"><Sparkles size={18}/></span><p><strong>Nyheter först</strong><span>diagnostik bara när den behövs</span></p></div>
-      </section>
-
       <section className="trackSwitcher" aria-label="Välj bevakningsspår">
         <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}>
-          <Newspaper size={22}/><span><strong>Branschen</strong><small>Senaste relevanta branschnyheterna.</small></span>
+          <Newspaper size={22}/><span><strong>Branschen</strong></span>
         </button>
         <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}>
-          <Building2 size={22}/><span><strong>Konkurrenterna</strong><small>Senaste nytt om bolagen du bevakar.</small></span>
+          <Building2 size={22}/><span><strong>Konkurrenterna</strong></span>
         </button>
       </section>
 
