@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.19.0",
+  "version": "3.20.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -40,7 +40,8 @@
     "qa:competitor-strategic-yield": "node --experimental-strip-types scripts/qa-v3.16-competitor-strategic-yield.ts",
     "qa:structured-competitor-intake": "node --experimental-strip-types scripts/qa-v3.17-structured-competitor-intake.ts",
     "qa:news-card-analysis": "node --experimental-strip-types scripts/qa-v3.18-news-card-analysis.ts",
-    "qa:new-since-last": "node --experimental-strip-types scripts/qa-v3.19-new-since-last.ts"
+    "qa:new-since-last": "node --experimental-strip-types scripts/qa-v3.19-new-since-last.ts",
+    "qa:news-first-ux": "node --experimental-strip-types scripts/qa-v3.20-news-first-ux.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
