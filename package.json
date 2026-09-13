@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.15.0",
+  "version": "3.16.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -36,7 +36,8 @@
     "qa:competitor-news-hubs": "node --experimental-strip-types scripts/qa-v3.05-competitor-news-hubs.ts",
     "qa:intake-recovery": "node --experimental-strip-types scripts/qa-v3.09-intake-recovery.ts",
     "qa:balanced-intake": "node --experimental-strip-types scripts/qa-v3.10-balanced-intake.ts",
-    "qa:source-type-balance": "node --experimental-strip-types scripts/qa-v3.12-source-type-balance.ts"
+    "qa:source-type-balance": "node --experimental-strip-types scripts/qa-v3.12-source-type-balance.ts",
+    "qa:competitor-strategic-yield": "node --experimental-strip-types scripts/qa-v3.16-competitor-strategic-yield.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
