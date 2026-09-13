@@ -58,6 +58,8 @@ export function assessNewsQuality(input:{
  const topicHits=countHits(all,WASTE_TERMS);
  const strategicHits=countHits(all,STRATEGIC_TERMS);
  const earlyEvent=EARLY_EVENT_PATTERNS.some(rx=>rx.test(all));
+ const directCompetitorContext=input.sourceType==='competitor'||input.sourceType==='company'||input.competitors.length>0;
+ const competitorStrategicEvent=directCompetitorContext&&strategicHits>0;
  const reasons:string[]=[];
  let score=0;
 
@@ -74,15 +76,26 @@ export function assessNewsQuality(input:{
  else reasons.push('Tunt artikelunderlag.');
 
  if(NOISE_TITLE.some(rx=>rx.test(title))){score-=30;reasons.push('Titeln liknar service-/navigationsinnehåll snarare än en nyhet.');}
- if(topicHits===0){score-=35;reasons.push('Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');}
+ if(topicHits===0){
+   if(competitorStrategicEvent){
+     // A named/official competitor can make strategically material news without spelling out
+     // "avfall" or "återvinning" in the headline/body, e.g. CEO changes, acquisitions or investments.
+     // Keep these as thin news instead of hard-rejecting them, while still requiring a strategic event.
+     score=Math.max(score+18,44);
+     reasons.push('Strategisk konkurrenthändelse utan generiskt branschord; behåll med försiktig vikt.');
+   } else {
+     score-=35;reasons.push('Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');
+   }
+ }
  if(titleTopicHits===0&&strategicHits===0&&input.competitors.length===0){score-=18;reasons.push('Svag nyhetssignal: varken ämne i titel, strategisk förändring eller konkurrentträff.');}
  if(input.article.extractionMethod==='paragraphs-fallback'){score-=10;reasons.push('Generisk paragraph-fallback ger lägre innehållssäkerhet.');}
  if(input.article.extractionMethod==='none'){score-=25;reasons.push('Artikeltext kunde inte verifieras.');}
 
  score=Math.max(0,Math.min(100,Math.round(score)));
- const strongContext=input.competitors.length>0||input.geographies.length>0||strategicHits>0||earlyEvent;
+ const strongContext=input.competitors.length>0||input.geographies.length>0||strategicHits>0||earlyEvent||competitorStrategicEvent;
+ const missingTopicWithoutCompetitorEvent=topicHits===0&&!competitorStrategicEvent;
  const decision:NewsQualityDecision=
-   topicHits===0||score<32?'reject':
+   missingTopicWithoutCompetitorEvent||score<32?'reject':
    (score>=52||earlyEvent&&score>=42)&&strongContext?'accept':
    score>=42?'accept-thin':'reject';
 
