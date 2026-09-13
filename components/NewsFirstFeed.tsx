@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 import { buildNewsCardAnalysis, type CardBidRelevance } from '@/lib/intelligence/news-card-analysis';
+import { initializeNewsSeenSnapshot, markNewsSeen, normalizeNewsKey, parseNewsSeenSnapshot, unseenNewsKeys, type NewsSeenSnapshot } from '@/lib/intelligence/news-seen-state';
 
 type NewsItem={
   title:string;url:string;source:string;publishedAt:string;category?:string;importance?:string;factualSummary?:string;
@@ -15,10 +16,19 @@ type SourceStatus={id:string;name:string;type:string;hits:number;ok:boolean;runH
 type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
-function keyOf(item:NewsItem){return item.url.replace(/[?#].*$/,'').replace(/\/$/,'')}
+function keyOf(item:NewsItem){return normalizeNewsKey(item.url)}
 
 export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{industry:string;customIndustry?:string;profile:WatchProfile;focus:'industry'|'competitors'}){
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
+  const [seenSnapshot,setSeenSnapshot]=useState<NewsSeenSnapshot|null>(null);
+  const [seenStateLoaded,setSeenStateLoaded]=useState(false);
+  const seenStorageKey=`bevakly:seen-news:v1:${profile.id}`;
+
+  const persistSeen=(snapshot:NewsSeenSnapshot)=>{
+    setSeenSnapshot(snapshot);
+    try{localStorage.setItem(seenStorageKey,JSON.stringify(snapshot))}catch{}
+  };
+
   const load=async()=>{
     setLoading(true);setError(null);
     try{
@@ -33,6 +43,12 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
     }catch(e){setError(e instanceof Error?e.message:'Kunde inte hämta nyheter');window.dispatchEvent(new CustomEvent('bevakly:refresh-error'))}
     finally{setLoading(false)}
   };
+
+  useEffect(()=>{
+    let snapshot:NewsSeenSnapshot|null=null;
+    try{snapshot=parseNewsSeenSnapshot(localStorage.getItem(seenStorageKey))}catch{}
+    setSeenSnapshot(snapshot);setSeenStateLoaded(true);
+  },[seenStorageKey]);
   useEffect(()=>{void load()},[industry,customIndustry,profile.id,profile.actors.join('|')]);
   useEffect(()=>{const h=()=>void load();window.addEventListener('bevakly:refresh-all',h);return()=>window.removeEventListener('bevakly:refresh-all',h)},[industry,customIndustry,profile.id,profile.actors.join('|')]);
 
@@ -41,14 +57,27 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
     for(const item of [...(data?.items??[]),...(data?.discoveryResults??[])]){if(item?.url&&!m.has(keyOf(item)))m.set(keyOf(item),item)}
     return [...m.values()].sort((a,b)=>new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime());
   },[data]);
+
+  useEffect(()=>{
+    if(!seenStateLoaded||seenSnapshot||loading||!data)return;
+    persistSeen(initializeNewsSeenSnapshot(all.map(keyOf),data.fetchedAt??new Date().toISOString()));
+  },[seenStateLoaded,seenSnapshot,loading,data,all.length]);
+
   const competitor=all.filter(x=>(x.competitors??[]).some(c=>profile.actors.some(a=>a.toLocaleLowerCase('sv-SE')===c.toLocaleLowerCase('sv-SE'))));
   const industryNews=all.filter(x=>!competitor.includes(x));
+  const unseen=useMemo(()=>unseenNewsKeys(seenSnapshot,all.map(keyOf)),[seenSnapshot,all]);
   const diag=data?.newsIntakeDiagnostics;
   const raw=diag?.fixed?.rawCandidates??0,clusters=diag?.fixed?.clustersConsidered??0;
   const totalAccepted=all.length;
   const sourcePressure=useMemo(()=>[...(data?.sourceStatus??[])].filter(x=>x.hits>0).sort((a,b)=>b.hits-a.hits).slice(0,8),[data?.sourceStatus]);
   const label=focus==='competitors'?'Konkurrenter':'Branschen';
   const items=focus==='competitors'?competitor:industryNews;
+  const unreadInView=items.filter(item=>unseen.has(keyOf(item))).length;
+
+  const markSeen=(keys:string[])=>{
+    if(!seenSnapshot)return;
+    persistSeen(markNewsSeen(seenSnapshot,keys));
+  };
 
   return <section id="industry-feed" style={{display:'grid',gap:10}}>
     {loading&&<div style={{fontSize:13,color:'var(--muted,#5f6b66)'}}>Hämtar…</div>}
@@ -59,11 +88,16 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
     </div>}
 
     <section id={focus==='competitors'?'actors':undefined} style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:14,padding:'12px 14px',background:'white'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8}}><h3 style={{margin:0,fontSize:18}}>{label}</h3><strong>{items.length}</strong></div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:8}}><h3 style={{margin:0,fontSize:18}}>{label}</h3><strong>{items.length}</strong>{unreadInView>0&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontSize:11,fontWeight:800,padding:'2px 6px',borderRadius:999,background:'#eef6ee'}}>+{unreadInView} nya</span>}</div>
+        {unreadInView>0&&<button onClick={()=>markSeen(items.filter(item=>unseen.has(keyOf(item))).map(keyOf))} style={{border:0,background:'transparent',fontSize:11,fontWeight:700,cursor:'pointer',padding:4}}>Markera lästa</button>}
+      </div>
       {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste 7 dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=>{
         const analysis=buildNewsCardAnalysis(item);
-        return <article key={keyOf(item)} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
-          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}><span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
+        const itemKey=keyOf(item);
+        const isNew=unseen.has(itemKey);
+        return <article key={itemKey} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}>{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
           <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
           {item.factualSummary&&<p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
           <div style={{margin:'0 0 7px',fontSize:13,lineHeight:1.4,color:'#33413b'}}>
@@ -71,7 +105,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
             {analysis.watchFor&&<div style={{marginTop:3}}><strong>Följ:</strong> {analysis.watchFor}</div>}
             {analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
           </div>
-          <a href={item.url} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
+          <a href={item.url} target="_blank" rel="noreferrer" onClick={()=>markSeen([itemKey])} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
         </article>;
       })}</div>}
     </section>
