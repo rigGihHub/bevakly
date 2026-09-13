@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Building2, Newspaper, RefreshCw, Search } from "lucide-react";
+import { Building2, Newspaper, RefreshCw } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import NewsFirstFeed from "@/components/NewsFirstFeed";
@@ -55,17 +55,16 @@ export default function Home() {
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
-      <header className="topbar"><div><p className="eyebrow">BEVAKLY · v{APP_VERSION}</p><h1>Senaste nytt</h1></div><div className="topActions"><button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}`:'Hämta nytt'}</small></span></button><button aria-label="Sök"><Search size={18}/></button><button aria-label="Notiser"><Bell size={18}/><span className="notificationDot"/></button></div></header>
+      <header className="topbar" style={{alignItems:'center'}}>
+        <div><p className="eyebrow">BEVAKLY · v{APP_VERSION}</p><h1 style={{marginBottom:0}}>Senaste nytt</h1></div>
+        <button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}`:'Hämta nytt'}</small></span></button>
+      </header>
 
       <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
-      <section className="trackSwitcher" aria-label="Välj bevakningsspår">
-        <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}>
-          <Newspaper size={22}/><span><strong>Branschen</strong></span>
-        </button>
-        <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}>
-          <Building2 size={22}/><span><strong>Konkurrenterna</strong></span>
-        </button>
+      <section className="trackSwitcher" aria-label="Välj bevakningsspår" style={{marginTop:8,marginBottom:10}}>
+        <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}><Newspaper size={18}/><span><strong>Branschen</strong></span></button>
+        <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}><Building2 size={18}/><span><strong>Konkurrenterna</strong></span></button>
       </section>
 
       <div className="navAnchor"><NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track}/></div>
