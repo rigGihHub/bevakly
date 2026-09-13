@@ -3,22 +3,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
+import { buildNewsCardAnalysis, type CardBidRelevance } from '@/lib/intelligence/news-card-analysis';
 
-type NewsItem={title:string;url:string;source:string;publishedAt:string;category?:string;importance?:string;factualSummary?:string;competitors?:string[];score?:number;status?:string};
+type NewsItem={
+  title:string;url:string;source:string;publishedAt:string;category?:string;importance?:string;factualSummary?:string;
+  competitors?:string[];geographies?:string[];score?:number;status?:string;sourceType?:string;sourceCount?:number;
+  independentSourceCount?:number;evidence?:string;bidNewsRelevance?:CardBidRelevance|null;
+};
 type IntakeDiagnostics={fixed?:{rawCandidates?:number;clustersConsidered?:number;articleReadAttempted?:number;articleReadFailed?:number;missingOrInvalidDate?:number;outsideSelectedPeriod?:number;acceptedInPeriod?:number};discovery?:{processedResults?:number;accepted?:number;rejected?:number;dedupeDropped?:number;rejectionReasons?:Record<string,number>}};
 type SourceStatus={id:string;name:string;type:string;hits:number;ok:boolean;runHealth?:string};
 type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
-function analysis(item:NewsItem){
-  const c=(item.competitors??[]).join(', ');
-  const cat=(item.category??'övrigt').toLocaleLowerCase('sv-SE');
-  if(cat.includes('upphand')||cat.includes('kontrakt')||cat.includes('tilldel')) return `Möjlig affärssignal${c?` för ${c}`:''}. Kontrollera omfattning, värde och leverantörsförändring.`;
-  if(cat.includes('tillstånd')||cat.includes('mynd')) return `Kan påverka kapacitet eller etablering${c?` för ${c}`:''}. Följ nästa beslut.`;
-  if(cat.includes('kapacitet')||cat.includes('anlägg')||cat.includes('invest')) return `Möjlig kapacitets- eller investeringssignal${c?` för ${c}`:''}.`;
-  if(cat.includes('jobb')||cat.includes('rekryt')) return `Kan signalera ökad aktivitet${c?` för ${c}`:''}, men kräver mer stöd.`;
-  return `Relevant observation${c?` om ${c}`:''}.`;
-}
 function keyOf(item:NewsItem){return item.url.replace(/[?#].*$/,'').replace(/\/$/,'')}
 
 export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{industry:string;customIndustry?:string;profile:WatchProfile;focus:'industry'|'competitors'}){
@@ -64,13 +60,20 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
 
     <section id={focus==='competitors'?'actors':undefined} style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:14,padding:'12px 14px',background:'white'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8}}><h3 style={{margin:0,fontSize:18}}>{label}</h3><strong>{items.length}</strong></div>
-      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste 7 dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=><article key={keyOf(item)} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}><span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}</div>
-        <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
-        {item.factualSummary&&<p style={{margin:'0 0 5px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
-        <p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4,color:'#33413b'}}><strong>Analys:</strong> {analysis(item)}</p>
-        <a href={item.url} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
-      </article>)}</div>}
+      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste 7 dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=>{
+        const analysis=buildNewsCardAnalysis(item);
+        return <article key={keyOf(item)} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}><span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
+          <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
+          {item.factualSummary&&<p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
+          <div style={{margin:'0 0 7px',fontSize:13,lineHeight:1.4,color:'#33413b'}}>
+            <div><strong>Varför viktigt:</strong> {analysis.why}</div>
+            {analysis.watchFor&&<div style={{marginTop:3}}><strong>Följ:</strong> {analysis.watchFor}</div>}
+            {analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
+          </div>
+          <a href={item.url} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
+        </article>;
+      })}</div>}
     </section>
 
     <details style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:10,padding:'9px 11px',fontSize:12}}><summary><strong>Diagnostik</strong></summary><div style={{marginTop:8,display:'flex',gap:6,flexWrap:'wrap'}}><span>{raw} kandidater</span><span>→ {clusters} kluster</span><span>→ {diag?.fixed?.articleReadAttempted??0} lästa</span><span>→ {totalAccepted} nyheter</span></div>{sourcePressure.length>0&&<div style={{marginTop:8}}><strong>Källor:</strong> {sourcePressure.slice(0,5).map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}{diag?.discovery?.rejectionReasons&&<div style={{marginTop:8}}><strong>Avslag:</strong> {Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k} ${v}`).join(' · ')}</div>}</details>
