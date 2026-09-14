@@ -21,6 +21,21 @@ const STRATEGIC_TERMS=[
   'tillstånd','samråd','miljöpröv','bygglov','detaljplan','markköp','rekryter','öppnar','stänger','rfi','marknadsdialog','tilldelningsbeslut','överprövning','optionsår','avtalsstart','entreprenörsbyte',
   'utbygg','expansion','ny vd','vd ','konkurs','samarbete','partnerskap','prisjuster','regeländring','förordning','lagstiftning'
 ];
+const MATERIAL_COMPETITOR_PATTERNS=[
+  /\b(?:förvärvar|förvärv|köper|säljer)\b[^.!?]{0,100}\b(?:bolag|verksamhet|anläggning|fastighet|rörelse)\b/i,
+  /\b(?:fusion|samgående|aktieöverlåtelse|ägarförändring|joint venture|gemensamt bolag)\b/i,
+  /\b(?:investerar|investering|miljoninvestering|miljardinvestering)\b/i,
+  /\b(?:ny|tillträder som|utses till)\s+(?:vd|ceo|koncernchef|affärsområdeschef)\b/i,
+  /\b(?:vd|ceo|koncernchef)\b[^.!?]{0,70}\b(?:slutar|avgår|lämnar|tillträder|utses)\b/i,
+  /\b(?:konkurs|rekonstruktion|likvidation)\b/i,
+  /\b(?:öppnar|stänger|etablerar|etablering|expanderar|expansion|utbyggnad)\b[^.!?]{0,110}\b(?:anläggning|verksamhet|site|terminal|depå|kontor|region|marknad)?\b/i,
+  /\b(?:kapacitet|produktion|mottagning|omlastning)\b[^.!?]{0,90}\b(?:ökar|utökas|minskar|begränsas|flyttas|upphör)\b/i,
+  /\b(?:tecknar|vinner|tilldelas|förlorar)\b[^.!?]{0,100}\b(?:avtal|kontrakt|upphandling|ramavtal)\b/i,
+  /\b(?:avtal|kontrakt|upphandling|ramavtal)\b[^.!?]{0,100}\b(?:tecknas|vinns|tilldelas|förlängs|upphör|överprövas)\b/i,
+  /\b(?:tillstånd|miljötillstånd|bygglov|detaljplan|samråd|miljöprövning)\b[^.!?]{0,100}\b(?:beviljas|avslås|ansöks|söks|ändras|överklagas|inleds|godkänns)?\b/i,
+  /\b(?:prisjustering|prisökning|prissänkning|avgiftshöjning|avgiftssänkning)\b/i,
+  /\b(?:regeländring|förordning|lagstiftning)\b[^.!?]{0,100}\b(?:påverkar|träder i kraft|ändras|skärps|lättas)\b/i,
+];
 const EARLY_EVENT_PATTERNS=[
  /\bmarkanvisning\b/i,/\b(?:säljer|köper)\b[^.!?]{0,80}\b(?:industrifastighet|verksamhetsmark|mark)\b/i,/\bplanbesked\b/i,/\baktieöverlåtelse\b/i,/\bägarförändring\b/i,/\blagringsmängder?\b[^.!?]{0,80}\b(?:utökas|större|godkänn)/i,/\bdetaljplan(?:en|earbetet)?\b[^.!?]{0,80}\b(?:antas|går vidare|möjliggör|medger)\b/i,
  /\bbygglov\b[^.!?]{0,70}\bbevilj/i,/\bsamråd\b[^.!?]{0,80}\b(?:inför|planerad|inleds|startar)\b/i,/\bkompletteringar?\s+begärs\b/i,
@@ -58,8 +73,9 @@ export function assessNewsQuality(input:{
  const topicHits=countHits(all,WASTE_TERMS);
  const strategicHits=countHits(all,STRATEGIC_TERMS);
  const earlyEvent=EARLY_EVENT_PATTERNS.some(rx=>rx.test(all));
+ const materialCompetitorEvent=MATERIAL_COMPETITOR_PATTERNS.some(rx=>rx.test(all));
  const directCompetitorContext=input.sourceType==='competitor'||input.sourceType==='company'||input.competitors.length>0;
- const competitorStrategicEvent=directCompetitorContext&&strategicHits>0;
+ const competitorStrategicEvent=directCompetitorContext&&materialCompetitorEvent;
  const reasons:string[]=[];
  let score=0;
 
@@ -78,13 +94,12 @@ export function assessNewsQuality(input:{
  if(NOISE_TITLE.some(rx=>rx.test(title))){score-=30;reasons.push('Titeln liknar service-/navigationsinnehåll snarare än en nyhet.');}
  if(topicHits===0){
    if(competitorStrategicEvent){
-     // A named/official competitor can make strategically material news without spelling out
-     // "avfall" or "återvinning" in the headline/body, e.g. CEO changes, acquisitions or investments.
-     // Keep these as thin news instead of hard-rejecting them, while still requiring a strategic event.
      score=Math.max(score+18,44);
-     reasons.push('Strategisk konkurrenthändelse utan generiskt branschord; behåll med försiktig vikt.');
+     reasons.push('Materiell konkurrenthändelse utan generiskt branschord; behåll med försiktig vikt.');
    } else {
-     score-=35;reasons.push('Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');
+     score-=35;
+     if(directCompetitorContext&&strategicHits>0)reasons.push('Konkurrent nämns, men händelsen är inte tillräckligt materiell för att kringgå ämneskravet.');
+     else reasons.push('Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');
    }
  }
  if(titleTopicHits===0&&strategicHits===0&&input.competitors.length===0){score-=18;reasons.push('Svag nyhetssignal: varken ämne i titel, strategisk förändring eller konkurrentträff.');}
