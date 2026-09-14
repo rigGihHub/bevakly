@@ -1,5 +1,6 @@
 import type { DiscoveryProviderQuery } from './discovery-provider';
 import { normalizeCompetitorWatchlist } from './competitor-news-discovery';
+import { OFFICIAL_COMPETITOR_SOURCES } from './competitor-official-sources';
 
 type Lane='procurement'|'permits'|'local-media'|'corporate';
 const LANES:Lane[]=['procurement','permits','local-media','corporate'];
@@ -9,12 +10,16 @@ function laneQuery(actor:string,lane:Lane){
   if(lane==='procurement') return `"${actor}" (upphandling OR tilldelning OR anbud OR kontrakt OR ramavtal OR entreprenad OR avtalsstart OR option)`;
   if(lane==='permits') return `"${actor}" (miljötillstånd OR tillstånd OR samråd OR överklagande OR marklov OR detaljplan OR miljödomstol OR länsstyrelsen)`;
   if(lane==='local-media') return `"${actor}" (etablering OR anläggning OR brand OR driftstopp OR protest OR kommun OR investering OR kapacitet OR återvinning OR avfall)`;
-  return `"${actor}" (förvärv OR säljer OR köper OR investering OR etablering OR partnerskap OR vd OR regionchef OR expansion OR kapacitet)`;
+  return `"${actor}" (förvärv OR säljer OR köper OR investering OR etablering OR vd OR regionchef OR expansion OR kapacitet OR kontrakt)`;
 }
 function laneClass(lane:Lane):DiscoveryProviderQuery['sourceClass']{
   if(lane==='permits') return 'environmental-record';
   if(lane==='procurement') return 'authority';
   return 'news';
+}
+function officialHostsFor(actor:string){
+  const source=OFFICIAL_COMPETITOR_SOURCES.find(x=>x.competitor.toLocaleLowerCase('sv-SE')===actor.toLocaleLowerCase('sv-SE'));
+  return [...new Set([source?.newsHost,source?.careerHost].filter((x):x is string=>Boolean(x)))];
 }
 export function buildCompetitorSignalQueue(actors:string[]|null|undefined,now=new Date(),maxQueries=4):DiscoveryProviderQuery[]{
   const day=now.toISOString().slice(0,10);
@@ -34,9 +39,11 @@ export function buildCompetitorSignalQueue(actors:string[]|null|undefined,now=ne
     intent:`competitor-${p.lane}`,
     sourceClass:laneClass(p.lane),
     query:laneQuery(p.actor,p.lane),
+    excludedHosts:officialHostsFor(p.actor),
   }));
 }
 export function summarizeCompetitorSignalQueue(queue:DiscoveryProviderQuery[],actors:string[]|null|undefined){
   const lanes=queue.reduce<Record<string,number>>((acc,q)=>{const lane=q.targetId.split(':').at(-1)??'unknown';acc[lane]=(acc[lane]??0)+1;return acc;},{});
-  return {enabled:true,watchedActors:normalizeCompetitorWatchlist(actors,6),queries:queue.length,lanes,rotation:'daily deterministic',principle:'Extra competitor signal searches rotate across procurement, permits, local media and corporate change. They only widen discovery; all hits still pass the normal quality and evidence gates.'};
+  const excludedOfficialHosts=[...new Set(queue.flatMap(q=>q.excludedHosts??[]))];
+  return {enabled:true,watchedActors:normalizeCompetitorWatchlist(actors,6),queries:queue.length,lanes,rotation:'daily deterministic',independentSourceGuard:true,excludedOfficialHosts,principle:'Extra competitor signal searches rotate across procurement, permits, local media and corporate change. Official competitor domains are excluded at provider-result level so this lane contributes independent evidence; all hits still pass normal quality and evidence gates.'};
 }
