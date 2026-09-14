@@ -50,8 +50,14 @@ export async function fetchSourceListingWithRecovery(input:{source:WatchSource;f
   }
 
   let feedCandidates:SourceCandidate[]=[]; let sitemapCandidates:SourceCandidate[]=[];
-  // Structured discovery is deliberately bounded and only supplements weak listing pages.
-  if(document&&/html/i.test(document.contentType||'text/html')&&candidateCount(document.html)<5){
+  const isHtml=document&&/html/i.test(document.contentType||'text/html');
+  const listingCandidateCount=document?candidateCount(document.html):0;
+  const weakListing=listingCandidateCount<5;
+  // Competitor-owned sources are allowlisted. Always probe one declared feed when present, even when the
+  // listing page itself already has several candidates. This closes a false-negative gap where a generic
+  // listing page can hide fresh strategic stories that are exposed only in RSS/Atom.
+  const shouldProbeStructured=Boolean(isHtml&&(weakListing||source.type==='competitor'));
+  if(document&&shouldProbeStructured){
     diagnostics.feedDiscoveryAttempted=true;
     const feedUrls=discoverDeclaredFeedUrls(document.html,document.finalUrl||source.listingUrl);
     diagnostics.feedDiscovered=feedUrls.length>0;
@@ -60,27 +66,32 @@ export async function fetchSourceListingWithRecovery(input:{source:WatchSource;f
     }
     diagnostics.feedCandidates=feedCandidates.length;
 
-    diagnostics.sitemapDiscoveryAttempted=true;
-    let sitemapUrls=discoverDeclaredSitemapUrls(document.html,document.finalUrl||source.listingUrl);
-    if(sitemapUrls.length===0&&source.baseUrl){
-      try{
-        const robotsUrl=new URL('/robots.txt',source.baseUrl).toString(); diagnostics.robotsChecked=true; diagnostics.structuredRequests++;
-        const robots=await fetchDocument(robotsUrl,6000); sitemapUrls=extractRobotsSitemaps(robots.html,robots.finalUrl||robotsUrl).filter(x=>sameOrigin(x,source.baseUrl!));
-      }catch{}
+    // Sitemap probing remains a recovery path for weak listing pages. On healthy competitor pages we avoid
+    // the extra robots/sitemap requests and use only an explicitly declared feed, keeping refresh latency bounded.
+    if(weakListing){
+      diagnostics.sitemapDiscoveryAttempted=true;
+      let sitemapUrls=discoverDeclaredSitemapUrls(document.html,document.finalUrl||source.listingUrl);
+      if(sitemapUrls.length===0&&source.baseUrl){
+        try{
+          const robotsUrl=new URL('/robots.txt',source.baseUrl).toString(); diagnostics.robotsChecked=true; diagnostics.structuredRequests++;
+          const robots=await fetchDocument(robotsUrl,6000); sitemapUrls=extractRobotsSitemaps(robots.html,robots.finalUrl||robotsUrl).filter(x=>sameOrigin(x,source.baseUrl!));
+        }catch{}
+      }
+      diagnostics.sitemapDiscovered=sitemapUrls.length>0;
+      const collected:SourceCandidate[]=[];
+      for(const sitemapUrl of sitemapUrls.slice(0,1)){
+        try{
+          diagnostics.structuredRequests++; const map=await fetchDocument(sitemapUrl,8000); diagnostics.sitemapFetchOk=true;
+          collected.push(...extractSitemapCandidates(map.html,map.finalUrl||sitemapUrl));
+          const children=extractSitemapIndexUrls(map.html,map.finalUrl||sitemapUrl).filter(x=>sameOrigin(x,source.baseUrl||source.listingUrl));
+          for(const child of children.slice(0,2)){
+            try{diagnostics.structuredRequests++;const nested=await fetchDocument(child,7000);collected.push(...extractSitemapCandidates(nested.html,nested.finalUrl||child));diagnostics.sitemapIndexFollowed++;}catch{}
+          }
+        }catch{}
+      }
+      sitemapCandidates=uniqueCandidates(collected,100); diagnostics.sitemapCandidates=sitemapCandidates.length;
     }
-    diagnostics.sitemapDiscovered=sitemapUrls.length>0;
-    const collected:SourceCandidate[]=[];
-    for(const sitemapUrl of sitemapUrls.slice(0,1)){
-      try{
-        diagnostics.structuredRequests++; const map=await fetchDocument(sitemapUrl,8000); diagnostics.sitemapFetchOk=true;
-        collected.push(...extractSitemapCandidates(map.html,map.finalUrl||sitemapUrl));
-        const children=extractSitemapIndexUrls(map.html,map.finalUrl||sitemapUrl).filter(x=>sameOrigin(x,source.baseUrl||source.listingUrl));
-        for(const child of children.slice(0,2)){
-          try{diagnostics.structuredRequests++;const nested=await fetchDocument(child,7000);collected.push(...extractSitemapCandidates(nested.html,nested.finalUrl||child));diagnostics.sitemapIndexFollowed++;}catch{}
-        }
-      }catch{}
-    }
-    sitemapCandidates=uniqueCandidates(collected,100); diagnostics.sitemapCandidates=sitemapCandidates.length;
+
     if(feedCandidates.length||sitemapCandidates.length){diagnostics.recovered=true;diagnostics.recoveryMode=feedCandidates.length&&sitemapCandidates.length?'structured':sitemapCandidates.length?'sitemap':'feed';}
 
     // Competitor-owned sources are already allowlisted and constrained by the adapter's news-like path rules.
