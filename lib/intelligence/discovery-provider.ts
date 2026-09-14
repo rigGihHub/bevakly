@@ -6,6 +6,7 @@ export type DiscoveryProviderQuery={
   intent:string;
   query:string;
   allowedHosts?:string[];
+  excludedHosts?:string[];
   sourceClass?:'municipal-protocol'|'competitor-jobs'|'environmental-record'|'competition-record'|'planning-record'|'legal-record'|'news'|'authority';
 };
 
@@ -45,14 +46,24 @@ type CacheEntry={expiresAt:number;hits:DiscoveryProviderHit[]};
 const memoryCache=new Map<string,CacheEntry>();
 
 function stableKey(provider:string,q:DiscoveryProviderQuery){
-  return `${provider}|${q.targetId}|${q.intent}|${q.query}`.toLocaleLowerCase('sv-SE');
+  const excludes=(q.excludedHosts??[]).slice().sort().join(',');
+  return `${provider}|${q.targetId}|${q.intent}|${q.query}|exclude:${excludes}`.toLocaleLowerCase('sv-SE');
 }
 function sleep(ms:number){return new Promise(resolve=>setTimeout(resolve,ms));}
-function cleanHits(hits:DiscoveryProviderHit[],limit:number){
+function hostMatches(host:string,rule:string){
+  const h=host.toLocaleLowerCase('en-US').replace(/^www\./,'');
+  const r=rule.toLocaleLowerCase('en-US').replace(/^www\./,'');
+  return h===r||h.endsWith(`.${r}`);
+}
+function isExcluded(url:string,hosts:string[]|undefined){
+  if(!hosts?.length)return false;
+  try{return hosts.some(rule=>hostMatches(new URL(url).hostname,rule));}catch{return false;}
+}
+function cleanHits(hits:DiscoveryProviderHit[],limit:number,excludedHosts?:string[]){
   const seen=new Set<string>();
   const out:DiscoveryProviderHit[]=[];
   for(const hit of hits){
-    if(!hit?.url||!hit?.title)continue;
+    if(!hit?.url||!hit?.title||isExcluded(hit.url,excludedHosts))continue;
     const key=hit.url.trim();
     if(seen.has(key))continue;
     seen.add(key);
@@ -102,7 +113,7 @@ export async function runDiscoveryProvider(
     for(let attempt=0;attempt<=policy.retryCount;attempt++){
       attempts++;
       try{
-        hits=cleanHits(await provider.search(query),policy.maxResultsPerQuery);
+        hits=cleanHits(await provider.search(query),policy.maxResultsPerQuery,query.excludedHosts);
         error=null; break;
       }catch(e){
         error=e instanceof Error?e.message:'Provider error';

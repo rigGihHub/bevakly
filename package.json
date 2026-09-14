@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.22.0",
+  "version": "3.23.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -43,7 +43,8 @@
     "qa:new-since-last": "node --experimental-strip-types scripts/qa-v3.19-new-since-last.ts",
     "qa:news-first-ux": "node --experimental-strip-types scripts/qa-v3.20-news-first-ux.ts",
     "qa:structured-competitor-yield": "node --experimental-strip-types scripts/qa-v3.21-structured-competitor-yield.ts",
-    "qa:material-competitor-events": "node --experimental-strip-types scripts/qa-v3.22-material-competitor-events.ts"
+    "qa:material-competitor-events": "node --experimental-strip-types scripts/qa-v3.22-material-competitor-events.ts",
+    "qa:independent-competitor-sources": "node --experimental-strip-types scripts/qa-v3.23-independent-competitor-sources.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
