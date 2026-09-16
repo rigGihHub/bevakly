@@ -118,7 +118,7 @@ export async function GET(req:NextRequest){
   const coverageCrawlHints=profile.id==='waste'?buildCoverageCrawlHints({sources:enabledSources,coverageHistory:preCrawlLearning.coverageSourceLearning,sourceLearning:preCrawlLearning.sourceLearning}):[];
   const adaptiveSourcePlan=buildAdaptiveSourcePlan(enabledSources,new Date(fetchedAt),coverageCrawlHints);
   const planBySource=new Map(adaptiveSourcePlan.map(x=>[x.source.id,x] as const));
-  const refreshSourceBudget=buildRefreshSourceBudget(adaptiveSourcePlan,new Date(fetchedAt),24);
+  const refreshSourceBudget=buildRefreshSourceBudget(adaptiveSourcePlan,new Date(fetchedAt),36);
   const orderedSources=refreshSourceBudget.selected.map(x=>x.source);
   const results=await mapWithConcurrency(orderedSources,8,async source=>{
     const recovered=await settleBefore(refreshDeadlines.sources,()=>fetchSourceListingWithRecovery({
@@ -147,7 +147,7 @@ export async function GET(req:NextRequest){
     return {source,items,error:null as string|null,recovery:recovered.diagnostics,freshness:fresh.diagnostics,extraBudgetCandidateUrls};
   });
 
-  const flattened=results.flatMap(x=>x.items); const clusters=dedupeCandidates(flattened).slice(0,72); let unknownDate=0;
+  const flattened=results.flatMap(x=>x.items); const clusters=dedupeCandidates(flattened).slice(0,120); let unknownDate=0;
   let missingPrimary=0,articleReadAttempted=0,articleReadOkCount=0,articleReadFailed=0,outsideSelectedPeriod=0,dateRecoveredFromArticle=0,dateRecoveredFromUrl=0,articleExtractionRecovered=0,articleExtractionThin=0; const newsQualityAssessments:NewsQualityAssessment[]=[]; let newsQualityRejected=0,newsQualityThin=0; const freshEventAssessments:FreshEventAssessment[]=[]; const articleValidationAssessments:ArticleValidationAssessment[]=[]; let articleValidationRejected=0,articleValidationThin=0; const bidNewsRelevanceAssessments:BidNewsRelevance[]=[];
   const articleExtractionMethods:Record<string,number>={};
   const discoveryObservations:SourceDiscoveryObservation[]=[];

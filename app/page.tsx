@@ -76,7 +76,7 @@ export default function Home() {
 
       <div className="navAnchor">{track==='ai-tools'||track==='google-workspace'
         ?<NewsFirstFeed industry={track} profile={SPECIAL_PROFILES[track]} focus={track} days={30}/>
-        :<NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track} days={track==='competitors'?30:7}/>
+        :<NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track} days={30}/>
       }</div>
     </main>
   </div>;
