@@ -10,10 +10,12 @@ type NewsItem={
   title:string;url:string;source:string;publishedAt:string;category?:string;importance?:string;factualSummary?:string;
   competitors?:string[];geographies?:string[];score?:number;status?:string;sourceType?:string;sourceCount?:number;
   independentSourceCount?:number;evidence?:string;bidNewsRelevance?:CardBidRelevance|null;
+  evidenceStatus?:'self-reported'|'independently-reported'|'officially-confirmed'|'multi-source-confirmed'|'single-source';
+  evidenceLabel?:string;
 };
 type IntakeDiagnostics={fixed?:{rawCandidates?:number;clustersConsidered?:number;articleReadAttempted?:number;articleReadFailed?:number;missingOrInvalidDate?:number;outsideSelectedPeriod?:number;acceptedInPeriod?:number};discovery?:{processedResults?:number;accepted?:number;rejected?:number;dedupeDropped?:number;rejectionReasons?:Record<string,number>}};
 type SourceStatus={id:string;name:string;type:string;hits:number;ok:boolean;runHealth?:string};
-type Payload={fetchedAt?:string;items?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
+type Payload={fetchedAt?:string;items?:NewsItem[];newsFeedItems?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
 function keyOf(item:NewsItem){return normalizeNewsKey(item.url)}
@@ -62,7 +64,8 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
 
   const all=useMemo(()=>{
     const m=new Map<string,NewsItem>();
-    for(const item of [...(data?.items??[]),...(data?.discoveryResults??[])]){if(item?.url&&!m.has(keyOf(item)))m.set(keyOf(item),item)}
+    const candidates=data?.newsFeedItems??[...(data?.items??[]),...(data?.discoveryResults??[])];
+    for(const item of candidates){if(item?.url&&!m.has(keyOf(item)))m.set(keyOf(item),item)}
     return [...m.values()].sort((a,b)=>new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime());
   },[data]);
 
@@ -107,13 +110,13 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
         const itemKey=keyOf(item);
         const isNew=unseen.has(itemKey);
         return <article key={itemKey} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
-          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}>{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}>{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{item.evidenceLabel&&<span style={{fontWeight:800,color:item.evidenceStatus==='self-reported'?'#7a5a20':'#1f6b3b'}}>· {item.evidenceLabel}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
           <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
           {item.factualSummary&&<p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
           <div style={{margin:'0 0 7px',fontSize:13,lineHeight:1.4,color:'#33413b'}}>
             <div><strong>Varför viktigt:</strong> {analysis.why}</div>
             {analysis.watchFor&&<div style={{marginTop:3}}><strong>Följ:</strong> {analysis.watchFor}</div>}
-            {analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
+            {!item.evidenceLabel&&analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
           </div>
           <a href={item.url} target="_blank" rel="noreferrer" onClick={()=>markSeen([itemKey])} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
         </article>;
