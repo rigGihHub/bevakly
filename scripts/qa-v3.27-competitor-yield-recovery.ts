@@ -33,5 +33,7 @@ const crowded=dedupeCandidates([
 assert.deepEqual(crowded.slice(0,3).map(item=>item.sourceId),['stena','prezero','ohlssons']);
 
 const page=readFileSync(new URL('../app/page.tsx',import.meta.url),'utf8');
-assert.ok(page.includes("days={track==='competitors'?30:7}"));
-console.log('v3.27 competitor yield recovery QA passed');
+assert.ok(page.includes('focus={track} days={30}'));
+const route=readFileSync(new URL('../app/api/industry-feed/route.ts',import.meta.url),'utf8');
+assert.ok(route.includes('dedupeCandidates(flattened).slice(0,120)'));
+console.log('v3.28 news reach QA passed');

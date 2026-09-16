@@ -20,7 +20,7 @@ export function buildRefreshDeadlines(startedAt=Date.now(),totalMs=45_000):Refre
  * the remaining priority, standard and exploration sources rotate so a refresh cannot synchronously
  * fan out to the whole network while lower-ranked sources still receive coverage over time.
  */
-export function buildRefreshSourceBudget(plan:AdaptiveSourcePlanItem[],now=new Date(),maxSources=24){
+export function buildRefreshSourceBudget(plan:AdaptiveSourcePlanItem[],now=new Date(),maxSources=36){
   const cap=Math.max(8,Math.min(plan.length,maxSources));
   const rotationKey=now.toISOString().slice(0,13);
   const selected:AdaptiveSourcePlanItem[]=[];const ids=new Set<string>();
