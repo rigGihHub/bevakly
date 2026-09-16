@@ -11,7 +11,9 @@ export type ArticleExtraction = {
 };
 
 function decode(value: string) {
-  return value.replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#39;/g, "'")
+  return value.replace(/&#x([0-9a-f]+);/gi,(_all,hex)=>String.fromCodePoint(Number.parseInt(hex,16)))
+    .replace(/&#(\d+);/g,(_all,decimal)=>String.fromCodePoint(Number.parseInt(decimal,10)))
+    .replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"').replace(/&aring;/g, "å").replace(/&auml;/g, "ä").replace(/&ouml;/g, "ö")
     .replace(/&Auml;/g,"Ä").replace(/&Ouml;/g,"Ö").replace(/&Aring;/g,"Å");
 }
@@ -117,6 +119,11 @@ function parsePublishedDate(raw:string):string|null{
     december:'12',dec:'12',
   };
   const lower=value.toLocaleLowerCase('sv-SE').replace(/\./g,'');
+  const dayFirst=lower.match(/^(\d{1,2})-(\d{1,2})-(20\d{2})(?:\s|$)/);
+  if(dayFirst){
+    const d=new Date(`${dayFirst[3]}-${String(dayFirst[2]).padStart(2,'0')}-${String(dayFirst[1]).padStart(2,'0')}T12:00:00Z`);
+    if(!Number.isNaN(d.getTime()))return d.toISOString();
+  }
   const named=lower.match(/(?:^|\s)(\d{1,2})\s+(januari|jan|january|februari|feb|february|mars|mar|march|april|apr|maj|may|juni|jun|june|juli|jul|july|augusti|aug|august|september|sep|sept|oktober|okt|oct|october|november|nov|december|dec)\s+(20\d{2})(?:\s+(?:kl\s*)?(\d{1,2})[:.]([0-5]\d))?/i);
   if(named){
     const month=monthMap[named[2]];
@@ -144,6 +151,7 @@ export function extractArticle(html: string, keywords: string[] = wasteKeywords)
   const dateRaw = meta(html, "article:published_time") || meta(html, "date") || meta(html, "datePublished") || meta(html, "pubdate") || meta(html, "publish-date") || meta(html,"dc.date") || meta(html,"dcterms.date") || clean(String(jsonArticle?.datePublished??jsonArticle?.dateCreated??'')) || firstMatch(html, [
     /<time[^>]+datetime=["']([^"']+)["']/i,
     /<time\b[^>]*>([\s\S]*?)<\/time>/i,
+    /<[^>]+class=["'][^"']*article__datepublished[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
     /"datePublished"\s*:\s*"([^"]+)"/i,
     /"dateCreated"\s*:\s*"([^"]+)"/i,
     /"uploadDate"\s*:\s*"([^"]+)"/i,

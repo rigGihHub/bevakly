@@ -7,13 +7,16 @@ function tokens(title: string) {
     title.toLocaleLowerCase("sv-SE")
       .replace(/[^a-zåäö0-9 ]/gi, " ")
       .split(/\s+/)
-      .filter((word) => word.length > 2 && !stopWords.has(word))
+      .filter((word) => (word.length > 2 || /^\d+$/.test(word)) && !stopWords.has(word))
   );
 }
 
 function similarity(a: string, b: string) {
   const at = tokens(a); const bt = tokens(b);
   if (!at.size || !bt.size) return 0;
+  const an=[...at].filter(token=>/^\d+$/.test(token));
+  const bn=[...bt].filter(token=>/^\d+$/.test(token));
+  if(an.length&&bn.length&&!an.some(token=>bn.includes(token)))return 0;
   let intersection = 0;
   for (const token of at) if (bt.has(token)) intersection += 1;
   return intersection / (at.size + bt.size - intersection);
@@ -48,38 +51,28 @@ function balanceGroups<T extends Candidate & {duplicates:Candidate[]}>(input:T[]
     byType.set(type,sources);
   }
   const orderedTypes=[...byType.keys()].sort((a,b)=>typeRank(a)-typeRank(b));
-  const sourceOrders=new Map<string,Array<[string,T[]]>>();
+  const sourceOrders=new Map<string,Array<{sourceId:string;bucket:T[];index:number}>>();
   for(const type of orderedTypes){
     const sources=byType.get(type)!;
-    sourceOrders.set(type,[...sources.entries()].sort((a,b)=>candidateRank(a[1][0],b[1][0])));
+    sourceOrders.set(type,[...sources.entries()].sort((a,b)=>candidateRank(a[1][0],b[1][0])).map(([sourceId,bucket])=>({sourceId,bucket,index:0})));
   }
   const result:T[]=[];
-  let round=0;
+  const sourceCursor=new Map(orderedTypes.map(type=>[type,0]));
   while(result.length<groups.length){
     let progressed=false;
     for(const type of orderedTypes){
       const sources=sourceOrders.get(type)!;
-      for(const [,bucket] of sources){
-        if(round<bucket.length){result.push(bucket[round]);progressed=true;break;}
+      if(!sources.length)continue;
+      const start=sourceCursor.get(type)??0;
+      for(let offset=0;offset<sources.length;offset++){
+        const position=(start+offset)%sources.length;
+        const source=sources[position];
+        const item=source.bucket[source.index];
+        if(!item)continue;
+        result.push(item);source.index++;sourceCursor.set(type,(position+1)%sources.length);progressed=true;break;
       }
     }
-    if(!progressed){
-      let sourceRound=0;
-      while(result.length<groups.length){
-        let sourceProgress=false;
-        for(const type of orderedTypes){
-          const sources=sourceOrders.get(type)!;
-          for(const [,bucket] of sources){
-            const item=bucket[sourceRound];
-            if(item&&!result.includes(item)){result.push(item);sourceProgress=true;}
-          }
-        }
-        if(!sourceProgress)break;
-        sourceRound++;
-      }
-      break;
-    }
-    round++;
+    if(!progressed)break;
   }
   return result;
 }

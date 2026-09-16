@@ -1,12 +1,14 @@
 import type { WatchSource } from "./sources";
 import { wasteDiscoveryKeywords } from "./sources";
 
-export type SourceCandidate = { title:string; url:string };
+export type SourceCandidate = { title:string; url:string; publishedAtHint?:string };
 
 function clean(value:string){
   return value.replace(/<script[\s\S]*?<\/script>/gi," ")
     .replace(/<style[\s\S]*?<\/style>/gi," ")
     .replace(/<[^>]*>/g," ")
+    .replace(/&#x([0-9a-f]+);/gi,(_all,hex)=>String.fromCodePoint(Number.parseInt(hex,16)))
+    .replace(/&#(\d+);/g,(_all,decimal)=>String.fromCodePoint(Number.parseInt(decimal,10)))
     .replace(/&amp;/g,"&").replace(/&nbsp;/g," ").replace(/&#39;/g,"'").replace(/&quot;/g,'"')
     .replace(/\s+/g," ").trim();
 }
@@ -56,6 +58,19 @@ export function extractSourceCandidates(html:string, source:WatchSource, keyword
     const url=absolute(match[1],source);
     if(!url.startsWith("http") || !allowedPath(url,source)) continue;
     result.push({title,url});
+  }
+  // Ohlssons publishes its newest story in full at the top of the verified news page,
+  // without a separate article link. Preserve that dated primary story instead of silently
+  // dropping it before the ordinary date, article and quality gates.
+  if(source.id==='ohlssons-news'){
+    const start=html.search(/<div[^>]+class=["'][^"']*aktuellt-item[^"']*["']/i);
+    const end=start>=0?html.slice(start).search(/<div[^>]+class=["'][^"']*aktuellt-list[^"']*["']/i):-1;
+    const fragment=start>=0?html.slice(start,end>0?start+end:undefined):'';
+    const date=fragment.match(/class=["'][^"']*post-date[^"']*["'][^>]*>\s*(20\d{2}-\d{2}-\d{2})\s*</i)?.[1];
+    const title=clean(fragment.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i)?.[1]??'');
+    if(date&&title.length>=18&&(source.type==='competitor'||relevant(title,activeKeywords))){
+      result.unshift({title,url:source.listingUrl,publishedAtHint:`${date}T12:00:00.000Z`});
+    }
   }
   const unique=new Map<string,SourceCandidate>();
   for(const item of result){
