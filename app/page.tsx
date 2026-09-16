@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Newspaper, RefreshCw } from "lucide-react";
+import { Building2, Grid2X2, Newspaper, RefreshCw, Sparkles } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import NewsFirstFeed from "@/components/NewsFirstFeed";
@@ -9,7 +9,12 @@ import WatchProfiles from "@/components/WatchProfiles";
 import { makeWatchProfile, type WatchProfile } from "@/lib/intelligence/watch-profiles";
 import { APP_VERSION } from "@/lib/version";
 
-type Track = "industry" | "competitors";
+type Track = "industry" | "competitors" | "ai-tools" | "google-workspace";
+
+const SPECIAL_PROFILES:Record<'ai-tools'|'google-workspace',WatchProfile>={
+  'ai-tools':{id:'special-ai-tools',name:'AI-verktyg',industry:'ai-tools',market:'Internationellt',regions:[],actors:[],themes:['Produktlanseringar','Modeller','Integrationer','Pris & tillgång','Säkerhet'],createdAt:'2026-01-01T00:00:00.000Z',updatedAt:'2026-01-01T00:00:00.000Z'},
+  'google-workspace':{id:'special-google-workspace',name:'Google Workspace',industry:'google-workspace',market:'Internationellt',regions:[],actors:[],themes:['Nya funktioner','Administratör','Utrullning','Säkerhet','AI'],createdAt:'2026-01-01T00:00:00.000Z',updatedAt:'2026-01-01T00:00:00.000Z'},
+};
 
 export default function Home() {
   const [selection,setSelection]=useState<OnboardingSelection|null>(null);
@@ -37,7 +42,7 @@ export default function Home() {
     return ()=>{window.removeEventListener('bevakly:refresh-done',onRefreshDone);window.removeEventListener('bevakly:refresh-error',onRefreshError)};
   },[]);
   useEffect(()=>{
-    const onTrack=(event:Event)=>{const detail=(event as CustomEvent<Track>).detail;if(detail==='industry'||detail==='competitors')setTrack(detail)};
+    const onTrack=(event:Event)=>{const detail=(event as CustomEvent<Track>).detail;if(['industry','competitors','ai-tools','google-workspace'].includes(detail))setTrack(detail)};
     window.addEventListener('bevakly:track',onTrack);
     return ()=>window.removeEventListener('bevakly:track',onTrack);
   },[]);
@@ -65,9 +70,14 @@ export default function Home() {
       <section className="trackSwitcher" aria-label="Välj bevakningsspår" style={{marginTop:8,marginBottom:10}}>
         <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}><Newspaper size={18}/><span><strong>Branschen</strong></span></button>
         <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}><Building2 size={18}/><span><strong>Konkurrenterna</strong></span></button>
+        <button className={track==='ai-tools'?'active':''} onClick={()=>setTrack('ai-tools')}><Sparkles size={18}/><span><strong>AI-verktyg</strong><small>ChatGPT, Gemini, Claude, Copilot m.fl.</small></span></button>
+        <button className={track==='google-workspace'?'active':''} onClick={()=>setTrack('google-workspace')}><Grid2X2 size={18}/><span><strong>Google Workspace</strong><small>Gmail, Drive, Docs, Meet m.fl.</small></span></button>
       </section>
 
-      <div className="navAnchor"><NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track}/></div>
+      <div className="navAnchor">{track==='ai-tools'||track==='google-workspace'
+        ?<NewsFirstFeed industry={track} profile={SPECIAL_PROFILES[track]} focus={track} days={30}/>
+        :<NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track}/>
+      }</div>
     </main>
   </div>;
 }

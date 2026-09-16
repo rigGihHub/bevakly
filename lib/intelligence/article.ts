@@ -125,6 +125,12 @@ function parsePublishedDate(raw:string):string|null{
     const d=new Date(`${named[3]}-${month}-${String(named[1]).padStart(2,'0')}T${hh}:${mm}:00Z`);
     if(!Number.isNaN(d.getTime()))return d.toISOString();
   }
+  const monthFirst=lower.match(/(?:^|\s)(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(20\d{2})/i);
+  if(monthFirst){
+    const month=monthMap[monthFirst[1]];
+    const d=new Date(`${monthFirst[3]}-${month}-${String(monthFirst[2]).padStart(2,'0')}T12:00:00Z`);
+    if(!Number.isNaN(d.getTime()))return d.toISOString();
+  }
   const normalized=value.replace(/\//g,'-');
   const d=new Date(normalized);
   if(!Number.isNaN(d.getTime()))return d.toISOString();
@@ -141,6 +147,7 @@ export function extractArticle(html: string, keywords: string[] = wasteKeywords)
     /"datePublished"\s*:\s*"([^"]+)"/i,
     /"dateCreated"\s*:\s*"([^"]+)"/i,
     /"uploadDate"\s*:\s*"([^"]+)"/i,
+    /<p[^>]+class=["'][^"']*blog-post-full__date[^"']*["'][^>]*>([\s\S]*?)<\/p>/i,
     /(?:publicerad|publicerat|published|publish date|uppdaterad|datum)\s*(?:den)?\s*:?\s*(\d{1,2}\s+(?:januari|jan\.?|februari|feb\.?|mars|mar\.?|april|apr\.?|maj|juni|jun\.?|juli|jul\.?|augusti|aug\.?|september|sep\.?|sept\.?|oktober|okt\.?|november|nov\.?|december|dec\.?)\s+20\d{2}(?:\s+(?:kl\s*)?\d{1,2}[:.]\d{2})?)/i,
     /(?:publicerad|published|publish date|uppdaterad|datum)[^0-9]{0,30}(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)/i,
   ]);

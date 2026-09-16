@@ -1,7 +1,7 @@
 import type { WatchSource } from './sources';
 import { wasteSources } from './sources';
 
-export type IndustryId = 'waste'|'energy'|'transport'|'construction'|'property'|'manufacturing'|'healthcare'|'retail'|'technology'|'finance'|'custom';
+export type IndustryId = 'waste'|'energy'|'transport'|'construction'|'property'|'manufacturing'|'healthcare'|'retail'|'technology'|'finance'|'ai-tools'|'google-workspace'|'custom';
 export type IndustryProfile = {
   id: IndustryId; label: string; description: string; keywords: string[]; themes: string[]; sources: WatchSource[]; suggestedCompetitors: string[];
 };
@@ -21,6 +21,18 @@ const technologySources: WatchSource[] = [...generalSources,
   { id:'vinnova', name:'Vinnova', listingUrl:'https://www.vinnova.se/m/nyheter/', baseUrl:'https://www.vinnova.se', type:'authority', scope:'sweden', tier:1, trustScore:95, enabled:true },
 ];
 
+const aiToolSources: WatchSource[] = [
+  {id:'openai-news',name:'OpenAI News',listingUrl:'https://openai.com/news/',baseUrl:'https://openai.com',type:'company',scope:'international',tier:1,trustScore:96,enabled:true,description:'Officiella produktnyheter om ChatGPT, Codex och OpenAI-modeller.'},
+  {id:'google-gemini-blog',name:'Google Gemini',listingUrl:'https://blog.google/products/gemini/',baseUrl:'https://blog.google',type:'company',scope:'international',tier:1,trustScore:96,enabled:true,description:'Officiella uppdateringar om Gemini och Googles AI-produkter.'},
+  {id:'anthropic-news',name:'Anthropic',listingUrl:'https://www.anthropic.com/news',baseUrl:'https://www.anthropic.com',type:'company',scope:'international',tier:1,trustScore:96,enabled:true,description:'Officiella nyheter om Claude och Anthropics modeller och verktyg.'},
+  {id:'microsoft-copilot-blog',name:'Microsoft Copilot',listingUrl:'https://www.microsoft.com/en-us/microsoft-copilot/blog/',baseUrl:'https://www.microsoft.com',type:'company',scope:'international',tier:1,trustScore:95,enabled:true,description:'Officiella produktnyheter om Microsoft Copilot.'},
+];
+
+const googleWorkspaceSources: WatchSource[] = [
+  {id:'google-workspace-updates',name:'Google Workspace Updates',listingUrl:'https://workspaceupdates.googleblog.com/',baseUrl:'https://workspaceupdates.googleblog.com',type:'company',scope:'international',tier:1,trustScore:98,enabled:true,description:'Googles officiella och löpande releaseflöde för Workspace.'},
+  {id:'google-workspace-blog',name:'Google Workspace Blog',listingUrl:'https://workspace.google.com/blog/',baseUrl:'https://workspace.google.com',type:'company',scope:'international',tier:1,trustScore:96,enabled:true,description:'Officiella Workspace-nyheter, produktlanseringar och administratörsinformation.'},
+];
+
 export const industryProfiles: IndustryProfile[] = [
   {id:'waste',label:'Avfall & återvinning',description:'Avfall, återvinning, cirkularitet och resurshantering.',keywords:['avfall','återvinn','insamling','sortering','återbruk','depon','förpack','producentansvar','biogas','textil','plast','batteri','cirkul','slam','farligt avfall','materialåtervin','waste','recycling','circular economy','packaging','incineration','landfill','secondary raw material'],themes:['Regelverk','Konkurrenter','Teknik & innovation','Investeringar','Cirkularitet','Kapacitet','Kostnad & marknad'],sources:wasteSources,suggestedCompetitors:['PreZero','Ragn-Sells','Stena Recycling','Ohlssons','Remondis','Verdis']},
   {id:'energy',label:'Energi',description:'El, kraft, energiomställning, nät, lagring och bränslen.',keywords:['energi','elmarknad','elnät','kraft','vindkraft','solkraft','kärnkraft','vätgas','energilagring','batterilager','fjärrvärme','bioenergi','elektrifier','energy','power grid','hydrogen'],themes:['Regelverk','Produktion','Elnät','Lagring','Investeringar','Teknik','Priser'],sources:energySources,suggestedCompetitors:[]},
@@ -32,6 +44,8 @@ export const industryProfiles: IndustryProfile[] = [
   {id:'retail',label:'Handel & retail',description:'Konsumentmarknad, e-handel, logistik, priser och butiksteknik.',keywords:['handel','butik','e-handel','retail','konsument','dagligvar','livsmedel','butikskedja','försäljning'],themes:['Konsument','Priser','E-handel','Teknik','Logistik','Regelverk'],sources:generalSources,suggestedCompetitors:[]},
   {id:'technology',label:'Tech & digitalisering',description:'AI, mjukvara, cybersäkerhet, data och digital infrastruktur.',keywords:['artificiell intelligens',' ai ','mjukvara','cybersäker','digitalisering','data','molntjänst','chip','halvledare','it-säkerhet','artificial intelligence','cybersecurity'],themes:['AI','Cybersäkerhet','Regelverk','Investeringar','Produktlanseringar','Infrastruktur'],sources:technologySources,suggestedCompetitors:[]},
   {id:'finance',label:'Finans & försäkring',description:'Bank, finans, försäkring, betalningar och finansiell reglering.',keywords:['bank','finans','försäkring','betalning','ränta','kredit','fintech','kapitalkrav','bolån','finance','insurance'],themes:['Regelverk','Räntor','Kredit','Fintech','Marknad','Risk'],sources:generalSources,suggestedCompetitors:[]},
+  {id:'ai-tools',label:'AI-verktyg',description:'Produktförändringar i ChatGPT, Gemini, Claude, Copilot och Perplexity.',keywords:['chatgpt','openai','codex','gemini','google ai','claude','anthropic','copilot','perplexity','ai model','ai assistant','artificial intelligence','generative ai','agent','agents','modell','model'],themes:['Produktlanseringar','Modeller','Integrationer','Pris & tillgång','Säkerhet'],sources:aiToolSources,suggestedCompetitors:[]},
+  {id:'google-workspace',label:'Google Workspace',description:'Förändringar i Gmail, Drive, Docs, Sheets, Slides, Meet, Chat och Admin.',keywords:['google workspace','gmail','google drive','google docs','google sheets','google slides','google meet','google chat','workspace admin','apps script','gemini for workspace'],themes:['Nya funktioner','Administratör','Utrullning','Säkerhet','AI'],sources:googleWorkspaceSources,suggestedCompetitors:[]},
   {id:'custom',label:'Annan bransch',description:'Ange en egen bransch. Bevakly använder svenska och europeiska myndighetskällor som startpunkt.',keywords:[],themes:['Regelverk','Konkurrenter','Teknik & innovation','Investeringar','Marknad'],sources:generalSources,suggestedCompetitors:[]},
 ];
 

@@ -17,6 +17,7 @@ export type NewsCardAnalysisInput={
   independentSourceCount?:number;
   evidence?:string;
   bidNewsRelevance?:CardBidRelevance|null;
+  watchKind?:'ai-tools'|'google-workspace';
 };
 
 export type NewsCardAnalysis={
@@ -80,6 +81,15 @@ const THEME_RULES:Array<{id:string;match:RegExp;why:(actor:string,geo:string)=>s
   },
 ];
 
+const PRODUCT_RULES:Array<{match:RegExp;label:string;why:string;watch:string}>=[
+  {match:/retire|deprecat|sunset|discontinu|phase.?out|stängs|avveckl|upphör/i,label:'Utfasning',why:'En utfasning kan kräva att arbetssätt, integrationer eller licenser ändras innan funktionen försvinner.',watch:'Följ sista användningsdatum, berörda abonnemang, ersättningsfunktion och eventuell migrering.'},
+  {match:/price|pricing|plan|subscription|license|licence|pris|abonnemang|licens/i,label:'Pris & villkor',why:'Ändrade priser, planer eller användningsgränser kan påverka både kostnad och vilket verktyg som är mest användbart.',watch:'Kontrollera vilka planer och regioner som berörs, startdatum samt nya gränser eller inkluderade funktioner.'},
+  {match:/security|privacy|compliance|admin|permission|policy|säker|integritet|behörighet/i,label:'Säkerhet & administration',why:'Förändringen kan påverka hur tjänsten får aktiveras, styras och användas med verksamhetens data.',watch:'Följ administratörskontroller, standardinställningar, databehandling, loggning och utrullningsdatum.'},
+  {match:/integrat|connect|plugin|extension|workspace|gmail|drive|docs|sheets|meet|chat/i,label:'Integration',why:'En ny eller ändrad integration kan korta arbetsflöden men kan också kräva nya behörigheter och administratörsbeslut.',watch:'Kontrollera faktisk tillgänglighet, behörighetskrav, stödda planer och om funktionen är påslagen som standard.'},
+  {match:/model|modell|gpt|gemini|claude|reasoning|context window|multimodal/i,label:'Modelluppdatering',why:'En modelluppdatering kan ändra kvalitet, hastighet, kostnad och vilka arbetsuppgifter verktyget klarar.',watch:'Jämför tillgänglighet, pris, begränsningar och dokumenterade resultat i relevanta arbetsflöden innan ett byte görs.'},
+  {match:/launch|introduc|announc|release|roll.?out|available|feature|update|lanser|släpps|utrull|tillgäng/i,label:'Produktuppdatering',why:'En konkret produktuppdatering kan förändra vilka arbetsmoment som går att automatisera eller förenkla.',watch:'Följ utrullningstakt, abonnemang, region, administratörskrav och om funktionen är allmänt tillgänglig eller bara testas.'},
+];
+
 function textOf(input:NewsCardAnalysisInput){return `${input.title} ${input.factualSummary??''} ${input.category??''}`.toLocaleLowerCase('sv-SE');}
 function actorOf(input:NewsCardAnalysisInput){return (input.competitors??[]).slice(0,2).join(' och ');}
 function geoOf(input:NewsCardAnalysisInput){return (input.geographies??[]).slice(0,2).join(' och ');}
@@ -113,6 +123,11 @@ function evidenceNote(input:NewsCardAnalysisInput){
 }
 
 export function buildNewsCardAnalysis(input:NewsCardAnalysisInput):NewsCardAnalysis{
+  if(input.watchKind){
+    const productRule=PRODUCT_RULES.find(rule=>rule.match.test(textOf(input)));
+    if(productRule)return {level:'watch',label:productRule.label,why:productRule.why,watchFor:productRule.watch,evidenceNote:evidenceNote(input)};
+    return {level:'insufficient',label:'Otillräckligt analysunderlag',why:'Källan beskriver en förändring, men underlaget räcker ännu inte för att säga hur användare eller administratörer påverkas.',evidenceNote:evidenceNote(input)};
+  }
   const themes=inferredThemes(input);
   const primary=THEME_RULES.find(rule=>themes.some(theme=>rule.match.test(theme)));
   const actor=actorOf(input); const geo=geoOf(input);

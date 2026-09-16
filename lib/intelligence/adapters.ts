@@ -25,6 +25,7 @@ function allowedPath(url:string, source:WatchSource){
     if(source.id==="eea-news") return /newsroom|publications|analysis/.test(path);
     if(source.id==="cinea-news") return /news-events\/news|programme|projects/.test(path);
     if(source.id==="letsrecycle") return /news\//.test(path);
+    if(source.id==="google-workspace-updates") return /\/20\d{2}\/\d{2}\/[^/]+\.html$/.test(path);
     if(source.id.startsWith("svt-")) return /\/nyheter\/lokalt\//.test(path);
     if(source.id==="sorab-news") return /nyheter/.test(path);
     if(source.id==="nsr-news") return /nyheter/.test(path);
