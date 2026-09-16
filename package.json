@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.24.0",
+  "version": "3.25.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -46,7 +46,8 @@
     "qa:structured-competitor-yield": "node --experimental-strip-types scripts/qa-v3.21-structured-competitor-yield.ts",
     "qa:material-competitor-events": "node --experimental-strip-types scripts/qa-v3.22-material-competitor-events.ts",
     "qa:independent-competitor-sources": "node --experimental-strip-types scripts/qa-v3.23-independent-competitor-sources.ts",
-    "qa:independent-evidence-weighting": "node --import tsx scripts/qa-v3.24-independent-evidence-weighting.ts"
+    "qa:independent-evidence-weighting": "node --import tsx scripts/qa-v3.24-independent-evidence-weighting.ts",
+    "qa:refresh-runtime-budget": "node --import tsx scripts/qa-v3.25-refresh-runtime-budget.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
