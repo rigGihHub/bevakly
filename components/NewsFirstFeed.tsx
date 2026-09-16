@@ -28,7 +28,9 @@ function sortForView(items:NewsItem[],unseen:Set<string>){
   });
 }
 
-export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{industry:string;customIndustry?:string;profile:WatchProfile;focus:'industry'|'competitors'}){
+type FeedFocus='industry'|'competitors'|'ai-tools'|'google-workspace';
+
+export default function NewsFirstFeed({industry,customIndustry,profile,focus,days=7}:{industry:string;customIndustry?:string;profile:WatchProfile;focus:FeedFocus;days?:7|30}){
   const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
   const [seenSnapshot,setSeenSnapshot]=useState<NewsSeenSnapshot|null>(null);
   const [seenStateLoaded,setSeenStateLoaded]=useState(false);
@@ -42,7 +44,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
   const load=async()=>{
     setLoading(true);setError(null);
     try{
-      const qs=new URLSearchParams({industry,days:'7',refresh:Date.now().toString()});
+      const qs=new URLSearchParams({industry,days:String(days),refresh:Date.now().toString()});
       if(customIndustry)qs.set('custom',customIndustry);
       if(profile.actors.length)qs.set('actors',profile.actors.join('|'));
       const r=await fetch(`/api/industry-feed?${qs}`,{cache:'no-store'});
@@ -59,8 +61,8 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
     try{snapshot=parseNewsSeenSnapshot(localStorage.getItem(seenStorageKey))}catch{}
     setSeenSnapshot(snapshot);setSeenStateLoaded(true);
   },[seenStorageKey]);
-  useEffect(()=>{void load()},[industry,customIndustry,profile.id,profile.actors.join('|')]);
-  useEffect(()=>{const h=()=>void load();window.addEventListener('bevakly:refresh-all',h);return()=>window.removeEventListener('bevakly:refresh-all',h)},[industry,customIndustry,profile.id,profile.actors.join('|')]);
+  useEffect(()=>{void load()},[industry,customIndustry,profile.id,profile.actors.join('|'),days]);
+  useEffect(()=>{const h=()=>void load();window.addEventListener('bevakly:refresh-all',h);return()=>window.removeEventListener('bevakly:refresh-all',h)},[industry,customIndustry,profile.id,profile.actors.join('|'),days]);
 
   const all=useMemo(()=>{
     const m=new Map<string,NewsItem>();
@@ -81,8 +83,9 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
   const raw=diag?.fixed?.rawCandidates??0,clusters=diag?.fixed?.clustersConsidered??0;
   const totalAccepted=all.length;
   const sourcePressure=useMemo(()=>[...(data?.sourceStatus??[])].filter(x=>x.hits>0).sort((a,b)=>b.hits-a.hits).slice(0,5),[data?.sourceStatus]);
-  const label=focus==='competitors'?'Konkurrenter':'Branschen';
-  const baseItems=focus==='competitors'?competitor:industryNews;
+  const isSpecial=focus==='ai-tools'||focus==='google-workspace';
+  const label=focus==='competitors'?'Konkurrenter':focus==='ai-tools'?'AI-verktyg':focus==='google-workspace'?'Google Workspace':'Branschen';
+  const baseItems=isSpecial?all:focus==='competitors'?competitor:industryNews;
   const items=useMemo(()=>sortForView(baseItems,unseen),[baseItems,unseen]);
   const unreadInView=items.filter(item=>unseen.has(keyOf(item))).length;
 
@@ -105,8 +108,8 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus}:{i
         <div style={{display:'flex',alignItems:'baseline',gap:8}}><h3 style={{margin:0,fontSize:18}}>{label}</h3><strong>{items.length}</strong>{unreadInView>0&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontSize:11,fontWeight:800,padding:'2px 6px',borderRadius:999,background:'#eef6ee'}}>+{unreadInView} nya</span>}</div>
         {unreadInView>0&&<button onClick={()=>markSeen(items.filter(item=>unseen.has(keyOf(item))).map(keyOf))} style={{border:0,background:'transparent',fontSize:11,fontWeight:700,cursor:'pointer',padding:4}}>Markera lästa</button>}
       </div>
-      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste 7 dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=>{
-        const analysis=buildNewsCardAnalysis(item);
+      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste {days} dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=>{
+        const analysis=buildNewsCardAnalysis({...item,watchKind:isSpecial?focus:undefined});
         const itemKey=keyOf(item);
         const isNew=unseen.has(itemKey);
         return <article key={itemKey} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>

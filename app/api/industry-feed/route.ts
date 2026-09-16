@@ -72,6 +72,7 @@ import { loadPersistentSourceHealth, persistSourceHealthOutcomes } from '@/lib/s
 import { loadCoverageBudgetHistory, persistCoverageBudgetAudit } from '@/lib/server/coverage-budget-audit-history';
 import { buildEvidenceWeightedNewsFeed, type EvidenceWeightedNewsInput } from '@/lib/intelligence/independent-evidence-weighting';
 import { buildRefreshDeadlines, buildRefreshSourceBudget } from '@/lib/intelligence/refresh-runtime-budget';
+import { buildSpecialWatchDiscoveryQueue } from '@/lib/intelligence/special-watch-discovery';
 
 export const dynamic='force-dynamic';
 async function fetchDocument(url:string,timeoutMs=9000):Promise<ListingFetchResult>{const r=await fetch(url,{cache:'no-store',redirect:'follow',headers:{'user-agent':'Bevakly/2.78 industry-feed (+https://bevakly.se)','accept':'text/html,application/xhtml+xml,application/rss+xml,application/atom+xml,application/xml;q=0.9,*/*;q=0.7'},signal:AbortSignal.timeout(timeoutMs)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return {html:await r.text(),finalUrl:r.url||url,status:r.status,contentType:r.headers.get('content-type')??''};}
@@ -167,7 +168,7 @@ export async function GET(req:NextRequest){
     if(articleValidation.decision==='reject'){articleValidationRejected++;return null;}
     if(articleValidation.decision==='thin')articleValidationThin++;
     const geographies=matchGeographies(text); const competitors=matchCompetitors(text).map(c=>c.name);
-    const newsQuality=assessNewsQuality({title:primary.title,article,sourceType:primary.sourceType,geographies,competitors});
+    const newsQuality=assessNewsQuality({title:primary.title,article,sourceType:primary.sourceType,geographies,competitors,topicTerms:profile.id==='waste'?undefined:profile.keywords});
     newsQualityAssessments.push(newsQuality);
     if(newsQuality.decision==='reject'){newsQualityRejected++;return null;}
     if(newsQuality.decision==='accept-thin')newsQualityThin++;
@@ -215,7 +216,8 @@ export async function GET(req:NextRequest){
   const usedNewsSlots=competitorNewsQueue.length+competitorSignalQueue.length+competitorSourceLaneQueue.filter(x=>x.sourceClass==='news').length+rotatingNewsQueue.length+coverageNewsQueue.length+sourceExpansionQueue.length;
   const newsBackfill=rotatingNewsCandidates.slice(4,4+Math.max(0,targetNewsSlots-usedNewsSlots));
   const officialNewsLane=competitorSourceLaneQueue;
-  const newsDiscoveryQueue=[...competitorNewsQueue,...competitorSignalQueue,...officialNewsLane,...rotatingNewsQueue,...coverageNewsQueue,...sourceExpansionQueue,...newsBackfill];
+  const specialWatchQueue=buildSpecialWatchDiscoveryQueue(profile.id,new Date(fetchedAt),8);
+  const newsDiscoveryQueue=specialWatchQueue.length?specialWatchQueue:[...competitorNewsQueue,...competitorSignalQueue,...officialNewsLane,...rotatingNewsQueue,...coverageNewsQueue,...sourceExpansionQueue,...newsBackfill];
   const municipalProtocolQueue=profile.id==='waste'?buildMunicipalProtocolQueue(new Date(fetchedAt),3):[];
   const competitorJobQueue=profile.id==='waste'?buildCompetitorJobQueue(requestedActors,new Date(fetchedAt),3):[];
   const publicRecordsQueue=profile.id==='waste'?buildPublicRecordsQueue(new Date(fetchedAt),2):[];

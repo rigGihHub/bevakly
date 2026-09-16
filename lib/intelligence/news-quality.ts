@@ -65,12 +65,14 @@ export function assessNewsQuality(input:{
  sourceType:string;
  geographies:string[];
  competitors:string[];
+ topicTerms?:string[];
 }):NewsQualityAssessment{
  const title=(input.article.title||input.title).trim();
  const body=input.article.textSample||input.article.description||'';
  const all=`${title} ${input.article.description} ${body}`;
- const titleTopicHits=countHits(title,WASTE_TERMS);
- const topicHits=countHits(all,WASTE_TERMS);
+ const topicTerms=input.topicTerms?.length?input.topicTerms:WASTE_TERMS;
+ const titleTopicHits=countHits(title,topicTerms);
+ const topicHits=countHits(all,topicTerms);
  const strategicHits=countHits(all,STRATEGIC_TERMS);
  const earlyEvent=EARLY_EVENT_PATTERNS.some(rx=>rx.test(all));
  const materialCompetitorEvent=MATERIAL_COMPETITOR_PATTERNS.some(rx=>rx.test(all));
@@ -99,7 +101,7 @@ export function assessNewsQuality(input:{
    } else {
      score-=35;
      if(directCompetitorContext&&strategicHits>0)reasons.push('Konkurrent nämns, men händelsen är inte tillräckligt materiell för att kringgå ämneskravet.');
-     else reasons.push('Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');
+     else reasons.push(input.topicTerms?.length?'Ingen tydlig koppling till bevakningens ämne i hämtat underlag.':'Ingen tydlig avfalls-/återvinningskoppling i hämtat underlag.');
    }
  }
  if(titleTopicHits===0&&strategicHits===0&&input.competitors.length===0){score-=18;reasons.push('Svag nyhetssignal: varken ämne i titel, strategisk förändring eller konkurrentträff.');}
