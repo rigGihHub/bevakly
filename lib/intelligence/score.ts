@@ -3,16 +3,18 @@ import type { SourceType } from "./sources";
 export type ScoreBreakdown = { topic:number; geography:number; commercial:number; regulatory:number; strategic:number; freshness:number; sourceQuality:number; competitor:number };
 export type ScoredSignal = { score:number; label:"Kritisk"|"Mycket viktig"|"Relevant"|"Bevaka"|"Låg"; breakdown:ScoreBreakdown };
 const topicWords=["avfall","återvinn","depon","förpack","plast","textil","insamling","sortering","producentansvar","cirkul"];
-const commercialWords=["upphandling","avtal","kontrakt","invest","anläggning","kapacitet","etabler","förvärv","fusion"];
-const regulatoryWords=["lag","regler","förordning","miljöbalk","krav","regering","riksdag","myndighet","tillstånd","skatt"];
-const strategicWords=["strateg","expansion","rekryter","samarbete","innovation","teknik","marknad"];
+const commercialWords=["upphandling","avtal","kontrakt","invest","anläggning","kapacitet","etabler","förvärv","fusion","pricing","price","subscription","enterprise"];
+const regulatoryWords=["lag","regler","förordning","miljöbalk","krav","regering","riksdag","myndighet","tillstånd","skatt","security","privacy","compliance","admin"];
+const strategicWords=["strateg","expansion","rekryter","samarbete","innovation","teknik","marknad","launch","release","update","feature","model","agent","integration","rollout"];
 function hits(text:string, words:string[]){ const lower=text.toLocaleLowerCase("sv-SE"); return words.filter(w=>lower.includes(w)).length; }
 function freshnessPoints(publishedAt?: string|null){ if(!publishedAt) return 2; const age=(Date.now()-new Date(publishedAt).getTime())/86400000; return age<=2?5:age<=7?4:age<=30?3:age<=90?1:0; }
-export function scoreSignal(input:{ title:string; body?:string; sourceType:SourceType; trustScore:number; geographyMatches?:number; competitorPriority?:1|2|3|null; publishedAt?:string|null }):ScoredSignal{
+export function scoreSignal(input:{ title:string; body?:string; sourceType:SourceType; trustScore:number; geographyMatches?:number; competitorPriority?:1|2|3|null; publishedAt?:string|null; topicKeywords?:string[] }):ScoredSignal{
  const text=`${input.title} ${input.body??""}`; const priority=input.competitorPriority;
+ const profileWords=(input.topicKeywords??[]).map(x=>x.trim().toLocaleLowerCase('sv-SE')).filter(x=>x.length>1);
+ const topicHitCount=profileWords.length?hits(text,profileWords):hits(text,topicWords);
  const breakdown:ScoreBreakdown={
   competitor: priority===1?20:priority===2?14:priority===3?8:0,
-  topic:Math.min(15,hits(text,topicWords)*4),
+  topic:Math.min(15,topicHitCount*4),
   geography:Math.min(15,(input.geographyMatches??0)*7),
   commercial:Math.min(15,hits(text,commercialWords)*6),
   regulatory:Math.min(15,hits(text,regulatoryWords)*6),
