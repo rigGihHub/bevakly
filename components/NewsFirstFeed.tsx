@@ -24,7 +24,9 @@ function sortForView(items:NewsItem[],unseen:Set<string>){
     const aNew=unseen.has(keyOf(a))?1:0;
     const bNew=unseen.has(keyOf(b))?1:0;
     if(aNew!==bNew)return bNew-aNew;
-    return new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime();
+    const scoreDelta=(b.score??0)-(a.score??0);
+    if(Math.abs(scoreDelta)>=8)return scoreDelta;
+    return new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime()||scoreDelta;
   });
 }
 
@@ -115,10 +117,11 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
         return <article key={itemKey} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
           <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}>{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{item.evidenceLabel&&<span style={{fontWeight:800,color:item.evidenceStatus==='self-reported'?'#7a5a20':'#1f6b3b'}}>· {item.evidenceLabel}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
           <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
+          {analysis.level!=='insufficient'&&<div style={{margin:'0 0 6px',fontSize:12,fontWeight:800,color:'#24483a'}}>{analysis.label}</div>}
           {item.factualSummary&&<p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
           <div style={{margin:'0 0 7px',fontSize:13,lineHeight:1.4,color:'#33413b'}}>
-            <div><strong>Varför viktigt:</strong> {analysis.why}</div>
-            {analysis.watchFor&&<div style={{marginTop:3}}><strong>Följ:</strong> {analysis.watchFor}</div>}
+            <div><strong>Det här betyder:</strong> {analysis.why}</div>
+            {analysis.watchFor&&<div style={{marginTop:3}}><strong>Håll koll på:</strong> {analysis.watchFor}</div>}
             {!item.evidenceLabel&&analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
           </div>
           <a href={item.url} target="_blank" rel="noreferrer" onClick={()=>markSeen([itemKey])} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
