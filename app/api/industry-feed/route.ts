@@ -5,7 +5,7 @@ import { dedupeCandidates } from '@/lib/intelligence/dedupe';
 import { extractArticle, factualSummary, type ArticleExtraction } from '@/lib/intelligence/article';
 import { inferPublishedAtFromUrl } from '@/lib/intelligence/article-recovery';
 import { classifyFeedItem, ageInDays } from '@/lib/intelligence/news-feed';
-import { scoreSignal } from '@/lib/intelligence/score';
+import { scoreForProfile, relevanceFirstComparator } from '@/lib/intelligence/feed-ranking';
 import { matchCompetitors, matchGeographies } from '@/lib/intelligence/entities';
 import { summarizeSourceNetwork } from '@/lib/intelligence/source-network';
 import { assessEvidenceQuality } from '@/lib/intelligence/evidence-quality';
@@ -174,7 +174,7 @@ export async function GET(req:NextRequest){
     if(newsQuality.decision==='accept-thin')newsQualityThin++;
     const bidNewsRelevance=profile.id==='waste'?assessBidNewsRelevance({title:article.title||primary.title,text,competitors,geographies,sourceType:primary.sourceType}):null;
     if(bidNewsRelevance)bidNewsRelevanceAssessments.push(bidNewsRelevance);
-    const scoring=scoreSignal({title:article.title||primary.title,body:text,sourceType:primary.sourceType,trustScore:primary.trustScore,geographyMatches:geographies.length,publishedAt:article.publishedAt});
+    const scoring=scoreForProfile({title:article.title||primary.title,body:text,sourceType:primary.sourceType,trustScore:primary.trustScore,geographyMatches:geographies.length,publishedAt:article.publishedAt},profile);
     const newsProvenance=assessNewsProvenance({title:article.title||primary.title,url:primary.url,source:primary.source,sourceType:primary.sourceType,sourceTier:primary.sourceTier,trustScore:primary.trustScore,publishedAt:article.publishedAt});
     const freshEvent=assessFreshEvent({title:article.title||primary.title,article,publishedAt:article.publishedAt,provenance:newsProvenance,now:new Date(fetchedAt)});
     freshEventAssessments.push(freshEvent);
@@ -196,7 +196,7 @@ export async function GET(req:NextRequest){
   });
   const qualityPassed=enriched.filter((x):x is NonNullable<typeof x>=>Boolean(x));
   const storyDeduplication=collapseStoryDuplicates(qualityPassed);
-  const items=storyDeduplication.items.sort((a,b)=>new Date(b.publishedAt!).getTime()-new Date(a.publishedAt!).getTime()||b.score-a.score).slice(0,120);
+  const items=storyDeduplication.items.sort(relevanceFirstComparator).slice(0,120);
   const newsQualitySummary={...summarizeNewsQuality(newsQualityAssessments),rejectedBeforeFeed:newsQualityRejected,thinRetained:newsQualityThin,storyDeduplication:storyDeduplication.diagnostics};
   const freshEventSummary=summarizeFreshEvents(freshEventAssessments);
   const articleValidationSummary={...summarizeArticleValidation(articleValidationAssessments),rejectedBeforeFeed:articleValidationRejected,thinRetained:articleValidationThin};
