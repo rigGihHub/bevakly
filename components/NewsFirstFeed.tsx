@@ -96,7 +96,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
     persistSeen(markNewsSeen(seenSnapshot,keys));
   };
 
-  return <section id="industry-feed" style={{display:'grid',gap:10}}>
+  return <section id="industry-feed" className="newsFirstFeed">
     {loading&&<div style={{fontSize:13,color:'var(--muted,#5f6b66)'}}>Hämtar…</div>}
     {error&&<div style={{border:'1px solid #c96',padding:12,borderRadius:10}}><strong>Hämtningen misslyckades.</strong> {error}</div>}
     {!loading&&totalAccepted===0&&<div style={{border:'1px solid #d8b36a',background:'#fffaf0',padding:12,borderRadius:12}}>
@@ -105,26 +105,26 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
       <details style={{marginTop:8,fontSize:12}}><summary>Tekniska detaljer</summary><div style={{marginTop:6}}>{diag?.fixed?.articleReadAttempted??0} artiklar lästa · {diag?.fixed?.articleReadFailed??0} läsfel · {diag?.fixed?.missingOrInvalidDate??0} saknade datum · {diag?.fixed?.outsideSelectedPeriod??0} utanför perioden.</div>{sourcePressure.length>0&&<div style={{marginTop:4}}>Största källor: {sourcePressure.map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}{diag?.discovery?.rejectionReasons&&<div style={{marginTop:4}}>Vanliga avslag: {Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k} ${v}`).join(' · ')}</div>}</details>
     </div>}
 
-    <section id={focus==='competitors'?'actors':undefined} style={{border:'1px solid var(--border,#dfe5e1)',borderRadius:14,padding:'12px 14px',background:'white'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:8}}><h3 style={{margin:0,fontSize:18}}>{label}</h3><strong>{items.length}</strong>{unreadInView>0&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontSize:11,fontWeight:800,padding:'2px 6px',borderRadius:999,background:'#eef6ee'}}>+{unreadInView} nya</span>}</div>
+    <section id={focus==='competitors'?'actors':undefined} className="newsFeedPanel">
+      <div className="newsFeedHeader">
+        <div className="newsFeedTitle"><h3>{label}</h3><strong>{items.length}</strong>{unreadInView>0&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontSize:11,fontWeight:800,padding:'2px 6px',borderRadius:999,background:'#eef6ee'}}>+{unreadInView} nya</span>}</div>
         {unreadInView>0&&<button onClick={()=>markSeen(items.filter(item=>unseen.has(keyOf(item))).map(keyOf))} style={{border:0,background:'transparent',fontSize:11,fontWeight:700,cursor:'pointer',padding:4}}>Markera lästa</button>}
       </div>
-      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste {days} dagarna.</p>:<div style={{display:'grid',gap:0,marginTop:6}}>{items.slice(0,focus==='competitors'?10:12).map(item=>{
+      {items.length===0?<p style={{color:'var(--muted,#5f6b66)',margin:'10px 0 2px'}}>Inget nytt senaste {days} dagarna.</p>:<div className="newsFeedList">{items.slice(0,focus==='competitors'?10:12).map(item=>{
         const analysis=buildNewsCardAnalysis({...item,watchKind:isSpecial?focus:undefined});
         const itemKey=keyOf(item);
         const isNew=unseen.has(itemKey);
-        return <article key={itemKey} style={{borderTop:'1px solid #edf0ee',padding:'10px 0'}}>
-          <div style={{display:'flex',gap:6,flexWrap:'wrap',fontSize:11,color:'var(--muted,#5f6b66)'}}>{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{item.evidenceLabel&&<span style={{fontWeight:800,color:item.evidenceStatus==='self-reported'?'#7a5a20':'#1f6b3b'}}>· {item.evidenceLabel}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
-          <h4 style={{margin:'4px 0 5px',fontSize:16,lineHeight:1.28}}>{item.title}</h4>
+        return <article key={itemKey} className="newsFeedCard">
+          <div className="newsFeedMeta">{isNew&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontWeight:900,color:'#1f6b3b'}}>NY</span>}<span>{fmtDate(item.publishedAt)}</span><span>· {item.source}</span>{item.category&&<span>· {item.category}</span>}{item.evidenceLabel&&<span style={{fontWeight:800,color:item.evidenceStatus==='self-reported'?'#7a5a20':'#1f6b3b'}}>· {item.evidenceLabel}</span>}{analysis.label&&analysis.level!=='insufficient'&&<span>· {analysis.label}</span>}</div>
+          <h4 className="newsFeedHeadline">{item.title}</h4>
           {analysis.level!=='insufficient'&&<div style={{margin:'0 0 6px',fontSize:12,fontWeight:800,color:'#24483a'}}>{analysis.label}</div>}
           {item.factualSummary&&<p style={{margin:'0 0 6px',fontSize:13,lineHeight:1.4}}>{item.factualSummary}</p>}
-          <div style={{margin:'0 0 7px',fontSize:13,lineHeight:1.4,color:'#33413b'}}>
+          <div className="newsFeedMeaning">
             <div><strong>Det här betyder:</strong> {analysis.why}</div>
             {analysis.watchFor&&<div style={{marginTop:3}}><strong>Håll koll på:</strong> {analysis.watchFor}</div>}
             {!item.evidenceLabel&&analysis.evidenceNote&&<div style={{marginTop:3,fontSize:12,color:'var(--muted,#5f6b66)'}}>{analysis.evidenceNote}</div>}
           </div>
-          <a href={item.url} target="_blank" rel="noreferrer" onClick={()=>markSeen([itemKey])} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700}}>Original <ExternalLink size={12}/></a>
+          <a className="newsFeedOriginal" href={item.url} target="_blank" rel="noreferrer" onClick={()=>markSeen([itemKey])}>Original <ExternalLink size={12}/></a>
         </article>;
       })}</div>}
     </section>
