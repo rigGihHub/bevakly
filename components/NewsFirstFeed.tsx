@@ -90,6 +90,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
   const baseItems=isSpecial?all:focus==='competitors'?competitor:industryNews;
   const items=useMemo(()=>sortForView(baseItems,unseen),[baseItems,unseen]);
   const unreadInView=items.filter(item=>unseen.has(keyOf(item))).length;
+  const highlights=items.slice(0,3);
 
   const markSeen=(keys:string[])=>{
     if(!seenSnapshot)return;
@@ -104,6 +105,14 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
       <p style={{margin:'6px 0 0',fontSize:13,color:'#5f6b66'}}>{raw} kandidater → {clusters} granskade.</p>
       <details style={{marginTop:8,fontSize:12}}><summary>Tekniska detaljer</summary><div style={{marginTop:6}}>{diag?.fixed?.articleReadAttempted??0} artiklar lästa · {diag?.fixed?.articleReadFailed??0} läsfel · {diag?.fixed?.missingOrInvalidDate??0} saknade datum · {diag?.fixed?.outsideSelectedPeriod??0} utanför perioden.</div>{sourcePressure.length>0&&<div style={{marginTop:4}}>Största källor: {sourcePressure.map(x=>`${x.name} ${x.hits}`).join(' · ')}</div>}{diag?.discovery?.rejectionReasons&&<div style={{marginTop:4}}>Vanliga avslag: {Object.entries(diag.discovery.rejectionReasons).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k} ${v}`).join(' · ')}</div>}</details>
     </div>}
+
+    {highlights.length>0&&<section className="newsBrief" aria-label="Viktigast just nu">
+      <div className="newsBriefHead"><div><span>SNABBÖVERSIKT</span><strong>Viktigast just nu</strong></div><small>{unreadInView>0?unreadInView+' nya i spåret':'Senaste prioriterade'}</small></div>
+      <div className="newsBriefGrid">{highlights.map((item,index)=>{
+        const brief=buildNewsCardAnalysis({...item,watchKind:isSpecial?focus:undefined});
+        return <a href={item.url} target="_blank" rel="noreferrer" key={'brief-'+keyOf(item)} onClick={()=>markSeen([keyOf(item)])}><span>{index+1}</span><div><strong>{item.title}</strong><small>{brief.level==='insufficient'?(item.factualSummary??'Öppna originalkällan för detaljer.'):brief.why}</small></div></a>;
+      })}</div>
+    </section>}
 
     <section id={focus==='competitors'?'actors':undefined} className="newsFeedPanel">
       <div className="newsFeedHeader">
