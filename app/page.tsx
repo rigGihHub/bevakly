@@ -65,13 +65,16 @@ export default function Home() {
         <button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}`:'Hämta nytt'}</small></span></button>
       </header>
 
-      <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
+      <section className="watchHub">
+        <div className="watchHubContext"><div><span>Aktiv bevakning</span><strong>{activeProfile.name}</strong></div><small>{activeProfile.market}{activeProfile.regions.length ? ' · '+activeProfile.regions.slice(0,2).join(', ') : ''}</small></div>
+        <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
-      <section className="trackSwitcher" aria-label="Välj bevakningsspår" style={{marginTop:8,marginBottom:10}}>
+      <section className="trackSwitcher" aria-label="Välj bevakningsspår">
         <button className={track==='industry'?'active':''} onClick={()=>setTrack('industry')}><Newspaper size={18}/><span><strong>Branschen</strong></span></button>
         <button className={track==='competitors'?'active':''} onClick={()=>setTrack('competitors')}><Building2 size={18}/><span><strong>Konkurrenterna</strong></span></button>
         <button className={track==='ai-tools'?'active':''} onClick={()=>setTrack('ai-tools')}><Sparkles size={18}/><span><strong>AI-verktyg</strong><small>ChatGPT, Gemini, Claude, Copilot m.fl.</small></span></button>
         <button className={track==='google-workspace'?'active':''} onClick={()=>setTrack('google-workspace')}><Grid2X2 size={18}/><span><strong>Google Workspace</strong><small>Gmail, Drive, Docs, Meet m.fl.</small></span></button>
+      </section>
       </section>
 
       <div className="navAnchor">{track==='ai-tools'||track==='google-workspace'
