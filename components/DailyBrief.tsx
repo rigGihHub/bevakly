@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 import { buildNewsCardAnalysis } from '@/lib/intelligence/news-card-analysis';
+import { fetchFeedShared } from '@/lib/client/feed-cache';
 
 type BriefTrack='industry'|'competitors'|'ai-tools'|'google-workspace';
 type BriefItem={title:string;url:string;source:string;publishedAt:string;score?:number;factualSummary?:string;category?:string;competitors?:string[];geographies?:string[];sourceType?:string;sourceCount?:number;independentSourceCount?:number;evidence?:string};
@@ -27,7 +28,7 @@ export default function DailyBrief({profile}:{profile:WatchProfile}){
   try{
    const base=new URLSearchParams({industry:profile.industry,days:'30',refresh:Date.now().toString()});if(profile.customIndustry)base.set('custom',profile.customIndustry);if(profile.actors.length)base.set('actors',profile.actors.join('|'));
    const urls=[{track:'industry' as const,url:'/api/industry-feed?'+base.toString(),watch:undefined},{track:'competitors' as const,url:'/api/industry-feed?'+base.toString(),watch:undefined},...SPECIAL.map(s=>({track:s.track,url:'/api/industry-feed?'+new URLSearchParams({industry:s.industry,days:'30',refresh:Date.now().toString()}).toString(),watch:s.track}))];
-   const payloads=await Promise.all(urls.map(async x=>({x,p:await (await fetch(x.url,{cache:'no-store'})).json() as Payload})));
+   const payloads=await Promise.all(urls.map(async x=>({x,p:await fetchFeedShared<Payload>(x.url)})));
    const all:Entry[]=[];
    for(const {x,p} of payloads){
     let candidates=uniq(itemsOf(p));
