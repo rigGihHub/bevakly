@@ -5,6 +5,7 @@ import { Building2, Grid2X2, Newspaper, RefreshCw, Sparkles } from "lucide-react
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import NewsFirstFeed from "@/components/NewsFirstFeed";
+import DailyBrief from "@/components/DailyBrief";
 import WatchProfiles from "@/components/WatchProfiles";
 import { makeWatchProfile, type WatchProfile } from "@/lib/intelligence/watch-profiles";
 import { APP_VERSION } from "@/lib/version";
@@ -64,6 +65,8 @@ export default function Home() {
         <div><p className="eyebrow">BEVAKLY · v{APP_VERSION}</p><h1 style={{marginBottom:0}}>Senaste nytt</h1></div>
         <button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}`:'Hämta nytt'}</small></span></button>
       </header>
+
+      <DailyBrief profile={activeProfile}/>
 
       <section className="watchHub">
         <div className="watchHubContext"><div><span>Aktiv bevakning</span><strong>{activeProfile.name}</strong></div><small>{activeProfile.market}{activeProfile.regions.length ? ' · '+activeProfile.regions.slice(0,2).join(', ') : ''}</small></div>
