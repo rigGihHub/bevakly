@@ -9,6 +9,7 @@ import DailyBrief from "@/components/DailyBrief";
 import WatchProfiles from "@/components/WatchProfiles";
 import { makeWatchProfile, type WatchProfile } from "@/lib/intelligence/watch-profiles";
 import { APP_VERSION } from "@/lib/version";
+import { clearFeedSharedCache } from "@/lib/client/feed-cache";
 
 type Track = "industry" | "competitors" | "ai-tools" | "google-workspace";
 
@@ -48,7 +49,7 @@ export default function Home() {
     return ()=>window.removeEventListener('bevakly:track',onTrack);
   },[]);
 
-  const refreshAll=()=>{if(refreshing)return;setRefreshing(true);window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80)};
+  const refreshAll=()=>{if(refreshing)return;setRefreshing(true);clearFeedSharedCache();window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80)};
   const completeOnboarding=(sel:OnboardingSelection)=>{
     const initial=makeWatchProfile({name:`${sel.industry==='waste'?'Avfall Sverige':'Min bevakning'}`,industry:sel.industry,customIndustry:sel.customIndustry,market:sel.market,regions:sel.regions.split(',').map(x=>x.trim()).filter(Boolean),actors:sel.competitors});
     setSelection(sel);setProfiles([initial]);setActiveProfileId(initial.id);
