@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 import { buildNewsCardAnalysis, type CardBidRelevance } from '@/lib/intelligence/news-card-analysis';
+import { fetchFeedShared } from '@/lib/client/feed-cache';
 import { initializeNewsSeenSnapshot, markNewsSeen, normalizeNewsKey, parseNewsSeenSnapshot, unseenNewsKeys, type NewsSeenSnapshot } from '@/lib/intelligence/news-seen-state';
 
 type NewsItem={
@@ -49,9 +50,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
       const qs=new URLSearchParams({industry,days:String(days),refresh:Date.now().toString()});
       if(customIndustry)qs.set('custom',customIndustry);
       if(profile.actors.length)qs.set('actors',profile.actors.join('|'));
-      const r=await fetch(`/api/industry-feed?${qs}`,{cache:'no-store'});
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      const payload=await r.json() as Payload;
+      const payload=await fetchFeedShared<Payload>(`/api/industry-feed?${qs}`);
       setData(payload);
       window.dispatchEvent(new CustomEvent('bevakly:refresh-done',{detail:{fetchedAt:payload.fetchedAt}}));
     }catch(e){setError(e instanceof Error?e.message:'Kunde inte hämta nyheter');window.dispatchEvent(new CustomEvent('bevakly:refresh-error'))}
