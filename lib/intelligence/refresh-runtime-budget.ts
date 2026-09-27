@@ -8,12 +8,13 @@ function ranked(items:AdaptiveSourcePlanItem[],key:string){
   return [...items].sort((a,b)=>b.priorityScore-a.priorityScore||hash(`${key}|${a.source.id}`)-hash(`${key}|${b.source.id}`));
 }
 
-export function buildRefreshDeadlines(startedAt=Date.now(),totalMs=45_000):RefreshDeadlines{
+export function buildRefreshDeadlines(startedAt=Date.now(),totalMs=45_000,mode:'full'|'special'='full'):RefreshDeadlines{
   const total=Math.max(20_000,totalMs);
+  const phases=mode==='special'?{sources:.24,articles:.50,discovery:.78}:{sources:.30,articles:.62,discovery:.86};
   return {
-    sources:startedAt+Math.round(total*.30),
-    articles:startedAt+Math.round(total*.62),
-    discovery:startedAt+Math.round(total*.86),
+    sources:startedAt+Math.round(total*phases.sources),
+    articles:startedAt+Math.round(total*phases.articles),
+    discovery:startedAt+Math.round(total*phases.discovery),
     total:startedAt+total,
   };
 }
