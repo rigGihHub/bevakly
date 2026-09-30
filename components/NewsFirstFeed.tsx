@@ -16,7 +16,8 @@ type NewsItem={
 };
 type IntakeDiagnostics={fixed?:{rawCandidates?:number;clustersConsidered?:number;articleReadAttempted?:number;articleReadFailed?:number;missingOrInvalidDate?:number;outsideSelectedPeriod?:number;acceptedInPeriod?:number};discovery?:{processedResults?:number;accepted?:number;rejected?:number;dedupeDropped?:number;rejectionReasons?:Record<string,number>}};
 type SourceStatus={id:string;name:string;type:string;hits:number;ok:boolean;runHealth?:string};
-type Payload={fetchedAt?:string;items?:NewsItem[];newsFeedItems?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];note?:string};
+type RefreshRuntime={mode?:'full'|'special';elapsedMs?:number;totalBudgetMs?:number;phaseMs?:{sources?:number;articles?:number;discovery?:number}};
+type Payload={fetchedAt?:string;items?:NewsItem[];newsFeedItems?:NewsItem[];discoveryResults?:NewsItem[];newsIntakeDiagnostics?:IntakeDiagnostics;sourceStatus?:SourceStatus[];newsIntake?:{refreshRuntime?:RefreshRuntime};note?:string};
 
 function fmtDate(value:string){try{return new Intl.DateTimeFormat('sv-SE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch{return value}}
 function keyOf(item:NewsItem){return normalizeNewsKey(item.url)}
@@ -90,6 +91,10 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
   const items=useMemo(()=>sortForView(baseItems,unseen),[baseItems,unseen]);
   const unreadInView=items.filter(item=>unseen.has(keyOf(item))).length;
   const highlights=items.slice(0,3);
+  const runtime=data?.newsIntake?.refreshRuntime;
+  const phaseEntries=runtime?.phaseMs?Object.entries(runtime.phaseMs).filter((x):x is [string,number]=>typeof x[1]==='number'):[];
+  const slowestPhase=phaseEntries.sort((a,b)=>b[1]-a[1])[0];
+  const runtimeLabel=slowestPhase?slowestPhase[0]==='sources'?'Källor':slowestPhase[0]==='articles'?'Artiklar':'Discovery':null;
 
   const markSeen=(keys:string[])=>{
     if(!seenSnapshot)return;
@@ -112,6 +117,8 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
         return <a href={item.url} target="_blank" rel="noreferrer" key={'brief-'+keyOf(item)} onClick={()=>markSeen([keyOf(item)])}><span>{index+1}</span><div><strong>{item.title}</strong><small>{brief.level==='insufficient'?(item.factualSummary??'Öppna originalkällan för detaljer.'):brief.why}</small></div></a>;
       })}</div>
     </section>}
+
+    {runtime&&<details className="feedRuntime"><summary><span>Uppdatering {Math.round((runtime.elapsedMs??0)/1000)} s</span>{runtimeLabel&&<small>Långsammast: {runtimeLabel} {Math.round((slowestPhase?.[1]??0)/1000)} s</small>}</summary><div>{phaseEntries.map(([name,ms])=><span key={name}>{name==='sources'?'Källor':name==='articles'?'Artiklar':'Discovery'} <b>{(ms/1000).toFixed(1)} s</b></span>)}</div></details>}
 
     <section id={focus==='competitors'?'actors':undefined} className="newsFeedPanel">
       <div className="newsFeedHeader">
