@@ -5,6 +5,7 @@ import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 import { buildNewsCardAnalysis, type CardBidRelevance } from '@/lib/intelligence/news-card-analysis';
 import { fetchFeedShared } from '@/lib/client/feed-cache';
+import { assessRefreshPerformance } from '@/lib/intelligence/refresh-performance';
 import { initializeNewsSeenSnapshot, markNewsSeen, normalizeNewsKey, parseNewsSeenSnapshot, unseenNewsKeys, type NewsSeenSnapshot } from '@/lib/intelligence/news-seen-state';
 
 type NewsItem={
@@ -93,8 +94,8 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
   const highlights=items.slice(0,3);
   const runtime=data?.newsIntake?.refreshRuntime;
   const phaseEntries=runtime?.phaseMs?Object.entries(runtime.phaseMs).filter((x):x is [string,number]=>typeof x[1]==='number'):[];
-  const slowestPhase=phaseEntries.sort((a,b)=>b[1]-a[1])[0];
-  const runtimeLabel=slowestPhase?slowestPhase[0]==='sources'?'Källor':slowestPhase[0]==='articles'?'Artiklar':'Discovery':null;
+  const performance=runtime?.phaseMs?assessRefreshPerformance(runtime.phaseMs,runtime.totalBudgetMs):null;
+  const runtimeLabel=performance?.slowest?performance.slowest==='sources'?'Källor':performance.slowest==='articles'?'Artiklar':'Discovery':null;
 
   const markSeen=(keys:string[])=>{
     if(!seenSnapshot)return;
@@ -118,7 +119,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
       })}</div>
     </section>}
 
-    {runtime&&<details className="feedRuntime"><summary><span>Uppdatering {Math.round((runtime.elapsedMs??0)/1000)} s</span>{runtimeLabel&&<small>Långsammast: {runtimeLabel} {Math.round((slowestPhase?.[1]??0)/1000)} s</small>}</summary><div>{phaseEntries.map(([name,ms])=><span key={name}>{name==='sources'?'Källor':name==='articles'?'Artiklar':'Discovery'} <b>{(ms/1000).toFixed(1)} s</b></span>)}</div></details>}
+    {runtime&&<details className="feedRuntime"><summary><span>Uppdatering {Math.round((runtime.elapsedMs??0)/1000)} s</span>{runtimeLabel&&<small>Långsammast: {runtimeLabel} {Math.round((performance?.slowestMs??0)/1000)} s · {performance?.status==='slow'?'Långsam':performance?.status==='watch'?'Bevaka':'Bra'}</small>}</summary><div>{phaseEntries.map(([name,ms])=><span key={name}>{name==='sources'?'Källor':name==='articles'?'Artiklar':'Discovery'} <b>{(ms/1000).toFixed(1)} s</b></span>)}</div></details>}
 
     <section id={focus==='competitors'?'actors':undefined} className="newsFeedPanel">
       <div className="newsFeedHeader">
