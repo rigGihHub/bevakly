@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.41.0",
+  "version": "3.43.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -49,7 +49,10 @@
     "qa:independent-evidence-weighting": "node --import tsx scripts/qa-v3.24-independent-evidence-weighting.ts",
     "qa:refresh-runtime-budget": "node --import tsx scripts/qa-v3.25-refresh-runtime-budget.ts",
     "qa:special-watch-feeds": "node --import tsx scripts/qa-v3.26-special-watch-feeds.ts",
-    "qa:competitor-yield-recovery": "node --import tsx scripts/qa-v3.27-competitor-yield-recovery.ts"
+    "qa:competitor-yield-recovery": "node --import tsx scripts/qa-v3.27-competitor-yield-recovery.ts",
+    "qa:refresh-history": "node --import tsx scripts/qa-v3.42-refresh-history.ts",
+    "qa:user-feedback": "node --import tsx scripts/qa-v3.43-user-feedback.ts",
+    "qa:feed-render": "tsx --tsconfig scripts/qa-tsconfig.json scripts/qa-v3.43-feed-render.tsx"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",

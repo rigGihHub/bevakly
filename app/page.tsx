@@ -5,7 +5,6 @@ import { Building2, Grid2X2, Newspaper, RefreshCw, Sparkles } from "lucide-react
 import Sidebar from "@/components/Sidebar";
 import Onboarding, { type OnboardingSelection } from "@/components/Onboarding";
 import NewsFirstFeed from "@/components/NewsFirstFeed";
-import DailyBrief from "@/components/DailyBrief";
 import WatchProfiles from "@/components/WatchProfiles";
 import { makeWatchProfile, type WatchProfile } from "@/lib/intelligence/watch-profiles";
 import { APP_VERSION } from "@/lib/version";
@@ -51,7 +50,7 @@ export default function Home() {
 
   const refreshAll=()=>{if(refreshing)return;setRefreshing(true);clearFeedSharedCache();window.setTimeout(()=>window.dispatchEvent(new CustomEvent('bevakly:refresh-all')),80)};
   const completeOnboarding=(sel:OnboardingSelection)=>{
-    const initial=makeWatchProfile({name:`${sel.industry==='waste'?'Avfall Sverige':'Min bevakning'}`,industry:sel.industry,customIndustry:sel.customIndustry,market:sel.market,regions:sel.regions.split(',').map(x=>x.trim()).filter(Boolean),actors:sel.competitors});
+    const initial=makeWatchProfile({name:`${sel.industry==='waste'?'Avfall Sverige':'Min bevakning'}`,industry:sel.industry,customIndustry:sel.customIndustry,market:sel.market,regions:sel.regions.split(',').map(x=>x.trim()).filter(Boolean),actors:sel.competitors,themes:sel.themes});
     setSelection(sel);setProfiles([initial]);setActiveProfileId(initial.id);
   };
   if(!ready) return null;
@@ -59,6 +58,7 @@ export default function Home() {
   const activeProfile=profiles.find(x=>x.id===activeProfileId)??profiles[0];
   if(!activeProfile) return <Onboarding onDone={completeOnboarding} />;
 
+  const displayedProfile=track==='ai-tools'||track==='google-workspace'?SPECIAL_PROFILES[track]:activeProfile;
   return <div className="appShell">
     <Sidebar />
     <main className="main" id="top">
@@ -67,10 +67,9 @@ export default function Home() {
         <button className="globalRefreshButton" onClick={refreshAll} disabled={refreshing} title="Hämta färsk information"><RefreshCw size={17} className={refreshing?'spin':''}/><span><strong>{refreshing?'Hämtar…':'Uppdatera'}</strong><small>{lastRefresh?`Senast ${new Date(lastRefresh).toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit'})}`:'Hämta nytt'}</small></span></button>
       </header>
 
-      <DailyBrief profile={activeProfile}/>
 
       <section className="watchHub">
-        <div className="watchHubContext"><div><span>Aktiv bevakning</span><strong>{activeProfile.name}</strong></div><small>{activeProfile.market}{activeProfile.regions.length ? ' · '+activeProfile.regions.slice(0,2).join(', ') : ''}</small></div>
+        <div className="watchHubContext"><div><span>Aktiv bevakning</span><strong>{displayedProfile.name}</strong></div><small>{displayedProfile.market}{displayedProfile.regions.length ? ' · '+displayedProfile.regions.join(', ') : ''}</small></div>
         <div id="watch-profiles" className="navAnchor"><WatchProfiles profiles={profiles} activeId={activeProfile.id} onChange={setProfiles} onActive={setActiveProfileId}/></div>
 
       <section className="trackSwitcher" aria-label="Välj bevakningsspår">
@@ -82,8 +81,8 @@ export default function Home() {
       </section>
 
       <div className="navAnchor">{track==='ai-tools'||track==='google-workspace'
-        ?<NewsFirstFeed industry={track} profile={SPECIAL_PROFILES[track]} focus={track} days={30}/>
-        :<NewsFirstFeed industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track} days={30}/>
+        ?<NewsFirstFeed key={track} industry={track} profile={SPECIAL_PROFILES[track]} focus={track} days={30}/>
+        :<NewsFirstFeed key={activeProfile.id} industry={activeProfile.industry} customIndustry={activeProfile.customIndustry} profile={activeProfile} focus={track} days={30}/>
       }</div>
     </main>
   </div>;

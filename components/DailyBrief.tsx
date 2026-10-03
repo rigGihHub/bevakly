@@ -34,7 +34,7 @@ export default function DailyBrief({profile}:{profile:WatchProfile}){
     let candidates=uniq(itemsOf(p));
     if(x.track==='competitors')candidates=candidates.filter(i=>(i.competitors??[]).some(c=>profile.actors.some(a=>a.toLocaleLowerCase('sv-SE')===c.toLocaleLowerCase('sv-SE'))));
     if(x.track==='industry')candidates=candidates.filter(i=>!(i.competitors??[]).some(c=>profile.actors.some(a=>a.toLocaleLowerCase('sv-SE')===c.toLocaleLowerCase('sv-SE'))));
-    for(const item of candidates.slice(0,6)){const a=buildNewsCardAnalysis({...item,watchKind:x.watch});all.push({...item,track:x.track,why:a.level==='insufficient'?(item.factualSummary??'Öppna originalkällan för detaljer.'):a.why});}
+    for(const item of candidates.slice(0,6)){const a=buildNewsCardAnalysis({...item,watchKind:x.watch==='ai-tools'||x.watch==='google-workspace'?x.watch:undefined});all.push({...item,track:x.track,why:a.level==='insufficient'?(item.factualSummary??'Öppna originalkällan för detaljer.'):a.why});}
    }
    setEntries(all.sort((a,b)=>(b.score??0)-(a.score??0)||new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime()).slice(0,5));
   }catch{setEntries([])}finally{setLoading(false)}

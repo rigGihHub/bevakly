@@ -31,7 +31,7 @@ export type NewsCardAnalysis={
 const THEME_RULES:Array<{id:string;match:RegExp;why:(actor:string,geo:string)=>string;watch:string}>= [
   {
     id:'contract',match:/kontrakt|tilldelning|upphandling/i,
-    why:(actor,geo)=>`Ett nytt eller förändrat uppdrag kan flytta volymer och stärka ${actor||'en aktör'}s position${geo?` i ${geo}`:''}.`,
+    why:(actor,geo)=>`Ett nytt eller förändrat uppdrag kan flytta volymer och stärka positionen för ${actor||'en aktör'}${geo?` i ${geo}`:''}.`,
     watch:'Kontrollera omfattning, avtalsstart, löptid, uppskattat värde och vilken leverantör som ersätts.',
   },
   {
@@ -82,36 +82,37 @@ const THEME_RULES:Array<{id:string;match:RegExp;why:(actor:string,geo:string)=>s
 ];
 
 const PRODUCT_RULES:Array<{match:RegExp;label:string;why:string;watch:string}>=[
-  {match:/retire|deprecat|sunset|discontinu|phase.?out|stängs|avveckl|upphör/i,label:'Utfasning',why:'En utfasning kan kräva att arbetssätt, integrationer eller licenser ändras innan funktionen försvinner.',watch:'Följ sista användningsdatum, berörda abonnemang, ersättningsfunktion och eventuell migrering.'},
-  {match:/price|pricing|plan|subscription|license|licence|pris|abonnemang|licens/i,label:'Pris & villkor',why:'Ändrade priser, planer eller användningsgränser kan påverka både kostnad och vilket verktyg som är mest användbart.',watch:'Kontrollera vilka planer och regioner som berörs, startdatum samt nya gränser eller inkluderade funktioner.'},
-  {match:/security|privacy|compliance|admin|permission|policy|säker|integritet|behörighet/i,label:'Säkerhet & administration',why:'Förändringen kan påverka hur tjänsten får aktiveras, styras och användas med verksamhetens data.',watch:'Följ administratörskontroller, standardinställningar, databehandling, loggning och utrullningsdatum.'},
-  {match:/integrat|connect|plugin|extension|workspace|gmail|drive|docs|sheets|meet|chat/i,label:'Integration',why:'En ny eller ändrad integration kan korta arbetsflöden men kan också kräva nya behörigheter och administratörsbeslut.',watch:'Kontrollera faktisk tillgänglighet, behörighetskrav, stödda planer och om funktionen är påslagen som standard.'},
-  {match:/model|modell|gpt|gemini|claude|reasoning|context window|multimodal/i,label:'Modelluppdatering',why:'En modelluppdatering kan ändra kvalitet, hastighet, kostnad och vilka arbetsuppgifter verktyget klarar.',watch:'Jämför tillgänglighet, pris, begränsningar och dokumenterade resultat i relevanta arbetsflöden innan ett byte görs.'},
-  {match:/launch|introduc|announc|release|roll.?out|available|feature|update|lanser|släpps|utrull|tillgäng/i,label:'Produktuppdatering',why:'En konkret produktuppdatering kan förändra vilka arbetsmoment som går att automatisera eller förenkla.',watch:'Följ utrullningstakt, abonnemang, region, administratörskrav och om funktionen är allmänt tillgänglig eller bara testas.'},
+  {match:/\b(?:academy|training|train \d|education|utbildning|utbildar|kurs)\b/i,label:'Utbildning',why:'Nyheten gäller utbildning och kompetens. Den visar inte i sig att verktygets funktioner har förändrats.',watch:'Kontrollera målgrupp, tillgång, kursinnehåll och eventuella deltagaravgifter.'},
+  {match:/\b(?:ways to|tips|how to|guide|household chores)\b/i,label:'Användningstips',why:'Artikeln beskriver användningsområden. Underlaget visar inte en ny modell eller ändrade priser.',watch:'Pröva om arbetssättet hjälper i en relevant uppgift och vilka funktioner det kräver.'},
+  {match:/\b(?:retire|deprecated|deprecation|sunset|discontinued|stängs|avvecklas|upphör)\b/i,label:'Utfasning',why:'En uttrycklig utfasning kan kräva ändrade arbetssätt eller integrationer.',watch:'Följ sista användningsdatum, berörda abonnemang och ersättningsfunktion.'},
+  {match:/\b(?:pricing|price (?:change|increase|cut|update)|subscription (?:price|cost)|license fee|new (?:pricing|subscription tier)|ändra[drt]? pris|prisjustering|prishöjning|prissänkning|licensavgift)\b/i,label:'Pris & villkor',why:'Artikeln beskriver en konkret ändring av pris eller abonnemangsvillkor som kan påverka kostnaden.',watch:'Kontrollera berörda abonnemang, startdatum och de faktiska pris- eller villkorsändringarna.'},
+  {match:/\b(?:security controls?|admin controls?|privacy controls?|permission changes?|security update|säkerhetsuppdatering|behörighetsändring)\b/i,label:'Säkerhet & administration',why:'Nyheten beskriver kontroller eller säkerhetsändringar som kan påverka hanteringen av verksamhetens data.',watch:'Kontrollera standardinställningar, behörigheter och när ändringen blir tillgänglig.'},
+  {match:/\b(?:scales|adopts|deploys|partners with|collaboration|customer story|kundcase|börjar använda|utökar samarbetet)\b/i,label:'Kundanvändning & samarbete',why:'Nyheten gäller en kunds användning eller samarbete. Kundens resultat kan inte antas gälla andra verksamheter.',watch:'Kontrollera vilka arbetsflöden som används och om resultat eller begränsningar är dokumenterade.'},
+  {match:/\b(?:new|updated|upgraded|next|ny|nya|uppdaterad)\b.{0,70}\b(?:model|modell|frontier intelligence)\b|\b(?:model|modell)\b.{0,60}\b(?:available|released|launch|lanseras|släpps)\b/i,label:'Modelluppdatering',why:'Nyheten beskriver en ny eller ändrad modell. Effekten på kvalitet, hastighet och kostnad behöver bedömas i egna arbetsflöden.',watch:'Jämför tillgänglighet, pris, begränsningar och dokumenterade resultat innan ett byte görs.'},
+  {match:/\b(?:new integration|new connector|introducing.{0,30}(?:integration|connector)|ny integration|ny anslutning)\b/i,label:'Integration',why:'Nyheten beskriver en ny koppling mellan tjänster som kan påverka arbetsflöden och behörigheter.',watch:'Kontrollera tillgänglighet, behörighetskrav och vilka tjänster som faktiskt stöds.'},
+  {match:/\b(?:launches|introducing|released|rolling out|new feature|new features|lanserar|lanseras|släpps|ny funktion|nya funktioner|utrullning)\b/i,label:'Produktuppdatering',why:'Nyheten beskriver en produktförändring. Nyttan beror på funktionens tillgänglighet och vilket arbete den förenklar.',watch:'Följ utrullning, abonnemang, regioner och om funktionen är ett test eller allmänt tillgänglig.'},
 ];
 
-function textOf(input:NewsCardAnalysisInput){return `${input.title} ${input.factualSummary??''} ${input.category??''}`.toLocaleLowerCase('sv-SE');}
+// Labels and upstream themes are hints, never evidence of an event.
+function textOf(input:NewsCardAnalysisInput){return `${input.title} ${input.factualSummary??''}`.toLocaleLowerCase('sv-SE');}
+const EVENT_EVIDENCE:Record<string,RegExp>={
+ contract:/vinner|tilldel|teckna|nytt? (?:\w*avtal|kontrakt|uppdrag)|upphandl|förläng.{0,30}avtal/i,
+ pricing:/prisjuster|prishöj|prissänk|ändra.{0,30}(?:pris|avgift)|höj.{0,30}(?:pris|avgift)|sänk.{0,30}(?:pris|avgift)/i,
+ capacity:/öppnar|utöka.{0,35}kapacitet|ny (?:anläggning|terminal|linje)|driftsätt|stänger.{0,30}anläggning/i,
+ permit:/ansök.{0,40}tillstånd|miljötillstånd|samråd|nya? (?:regler|föreskrifter|förordning)|föreskrift.{0,30}(?:förslag|beslut)|beslut.{0,30}tillstånd/i,
+ establishment:/etablerar|ny etablering|köper.{0,25}mark|markköp|detaljplan|bygglov/i,
+ ma:/förvärv|fusion|uppköp|köper.{0,35}(?:bolag|verksamhet)/i,
+ investment:/investerar|investering|satsar.{0,30}(?:miljoner|miljarder|mkr)/i,
+ competitor:/expanderar|expansion|nytt erbjudande/i,
+ leadership:/ny vd|utser.{0,30}(?:vd|chef)|vd.{0,30}avgår|omorganisation/i,
+ technology:/pilotprojekt|ny teknik|ny lösning|testar|lanserar.{0,30}(?:teknik|robot|sortering)/i,
+};
 function actorOf(input:NewsCardAnalysisInput){return (input.competitors??[]).slice(0,2).join(' och ');}
 function geoOf(input:NewsCardAnalysisInput){return (input.geographies??[]).slice(0,2).join(' och ');}
 
 function inferredThemes(input:NewsCardAnalysisInput){
-  const explicit=input.bidNewsRelevance?.themes??[];
-  if(explicit.length)return explicit;
   const text=textOf(input);
-  const inferred:string[]=[];
-  const candidates:Array<[string,RegExp]>= [
-    ['Kontrakt/tilldelning',/upphandling|tilldel|avtal|kontrakt|uppdrag/],
-    ['Pris/kostnad/materialflöde',/pris|kostnad|behandlingsavgift|materialersättning/],
-    ['Anläggning/kapacitet',/anläggning|kapacitet|terminal|driftsätt/],
-    ['Tillstånd/reglering',/tillstånd|samråd|miljöpröv|förordning|regelverk/],
-    ['Etablering/mark',/etabler|markköp|detaljplan|bygglov/],
-    ['Förvärv/M&A',/förvärv|fusion|uppköp|köper/],
-    ['Investering',/invest|satsning/],
-    ['Ledning/organisation',/ny vd|vd .*avgår|omorganisation|utser .*chef/],
-    ['Teknik/pilot',/pilot|innovation|teknik|automation/],
-  ];
-  for(const [label,rx] of candidates)if(rx.test(text))inferred.push(label);
-  return inferred;
+  return THEME_RULES.filter(rule=>EVENT_EVIDENCE[rule.id]?.test(text));
 }
 
 function evidenceNote(input:NewsCardAnalysisInput){
@@ -124,12 +125,12 @@ function evidenceNote(input:NewsCardAnalysisInput){
 
 export function buildNewsCardAnalysis(input:NewsCardAnalysisInput):NewsCardAnalysis{
   if(input.watchKind){
-    const productRule=PRODUCT_RULES.find(rule=>rule.match.test(textOf(input)));
+    const productRule=PRODUCT_RULES.find(rule=>rule.match.test(input.title))??PRODUCT_RULES.find(rule=>rule.match.test(textOf(input)));
     if(productRule)return {level:'watch',label:productRule.label,why:productRule.why,watchFor:productRule.watch,evidenceNote:evidenceNote(input)};
     return {level:'insufficient',label:'Otillräckligt analysunderlag',why:'Källan beskriver en förändring, men underlaget räcker ännu inte för att säga hur användare eller administratörer påverkas.',evidenceNote:evidenceNote(input)};
   }
   const themes=inferredThemes(input);
-  const primary=THEME_RULES.find(rule=>themes.some(theme=>rule.match.test(theme)));
+  const primary=themes[0];
   const actor=actorOf(input); const geo=geoOf(input);
   const tier=input.bidNewsRelevance?.tier;
   const label=input.bidNewsRelevance?.label ?? (tier==='A'?'Direkt affärskritisk':tier==='B'?'Strategiskt viktig':tier==='C'?'Relevant omvärld':'Bevaka');

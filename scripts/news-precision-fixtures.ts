@@ -35,7 +35,7 @@ const noise=[
  ['calendar','Återvinningskalender 2026','Kalender för sophämtning, återvinning och helgdagar.'],
  ['simhall','Kommunen inviger ny simhall','Kommunen inviger en ny simhall efter flera års byggnation.'],
 ];
-noise.forEach((x,i)=>fixtures.push(base(`noise-${i}`,x[0],x[1],x[2],{relevant:false,article:'valid',provenance:'independent-reporting'},i===9?{geographies:['Örebro']}:{geographies:[]})));
+noise.forEach((x,i)=>fixtures.push(base(`noise-${i}`,x[0],x[1],x[2],{relevant:false,article:i===7?'reject':'valid',provenance:'independent-reporting'},i===9?{geographies:['Örebro']}:{geographies:[]})));
 const invalid=[
  base('invalid-cat','invalid','Nyheter','Avfall och återvinning. Senaste nyheter och arkiv på webbplatsen.',{relevant:false,article:'reject'},{url:'https://example.se/nyheter/',extractionMethod:'paragraphs-fallback'}),
  base('invalid-search','invalid','Sökresultat','Sökresultat för avfall återvinning investering anläggning.',{relevant:false,article:'reject'},{url:'https://example.se/search?s=avfall',extractionMethod:'metadata'}),

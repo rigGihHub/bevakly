@@ -3,7 +3,7 @@ import { dedupeCandidates } from "@/lib/intelligence/dedupe";
 import { extractSourceCandidates } from "@/lib/intelligence/adapters";
 import { scoreSignal } from "@/lib/intelligence/score";
 import { wasteSources } from "@/lib/intelligence/sources";
-import { extractArticle, factualSummary } from "@/lib/intelligence/article";
+import { extractArticle, factualSummary, type ArticleExtraction } from "@/lib/intelligence/article";
 import { matchCompetitors, matchGeographies } from "@/lib/intelligence/entities";
 import { persistLiveSignals } from "@/lib/server/persistence";
 import { fetchTedWasteNotices } from "@/lib/intelligence/ted";
@@ -38,7 +38,7 @@ export async function GET() {
 
   const enriched = await Promise.all(clusters.map(async group => {
     const original = flattened.find(item => item.url === group.url)!;
-    let article = { title:"", description:"", publishedAt:null as string|null, textSample:"" };
+    let article:ArticleExtraction = { title:"", description:"", publishedAt:null, textSample:"", extractionMethod:"none", extractedChars:0 };
     let articleError: string|null = null;
     try { article = extractArticle(await fetchText(group.url)); }
     catch (error) { articleError = error instanceof Error ? error.message : "Kunde inte läsa artikeln"; }
