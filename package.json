@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.43.0",
+  "version": "3.43.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -52,7 +52,7 @@
     "qa:competitor-yield-recovery": "node --import tsx scripts/qa-v3.27-competitor-yield-recovery.ts",
     "qa:refresh-history": "node --import tsx scripts/qa-v3.42-refresh-history.ts",
     "qa:user-feedback": "node --import tsx scripts/qa-v3.43-user-feedback.ts",
-    "qa:feed-render": "tsx --tsconfig scripts/qa-tsconfig.json scripts/qa-v3.43-feed-render.tsx"
+    "qa:feed-render": "TSX_TSCONFIG_PATH=scripts/qa-tsconfig.json node --import tsx scripts/qa-v3.43-feed-render.tsx"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",

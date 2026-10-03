@@ -3,7 +3,7 @@ import { extractArticle } from '../lib/intelligence/article.ts';
 import { validateSourceArticle,nonNewsPageReason } from '../lib/intelligence/source-article-validation.ts';
 import { buildNewsCardAnalysis } from '../lib/intelligence/news-card-analysis.ts';
 import { makeWatchProfile } from '../lib/intelligence/watch-profiles.ts';
-import { selectProfileNews,profileNewsMatch } from '../lib/intelligence/profile-news-selection.ts';
+import { selectProfileNews,profileNewsMatch,visibleNewsGeographies } from '../lib/intelligence/profile-news-selection.ts';
 import { competitorCoverageStatus } from '../lib/intelligence/competitor-coverage-status.ts';
 import { extractSourceCandidates } from '../lib/intelligence/adapters.ts';
 import { processDiscoveryResult } from '../lib/intelligence/discovery-result-pipeline.ts';
@@ -35,6 +35,9 @@ assert.equal(product('4 ways to tackle household chores with Gemini','Gemini hel
 assert.equal(product('Gemini 4 Argon: our next era of frontier intelligence','A new model launched today.').label,'Modelluppdatering');
 assert.equal(product('New Gemini model is now available').label,'Modelluppdatering');
 assert.equal(product('New pricing for API subscriptions').label,'Pris & villkor');
+assert.equal(product('Claude discovers a novel enzyme system',"We're introducing a new life sciences research group and laboratory.").label,'Forskning');
+assert.equal(product('Introducing Gemini 3.8 Live with Live Avatar').label,'Produktuppdatering');
+assert.equal(product('Model training efficiency').level,'insufficient');
 assert.equal(product('Our plans for Claude').level,'insufficient','plan and brand name are not product events');
 assert.equal(buildNewsCardAnalysis({title:magazine.title,factualSummary:magazine.textSample,bidNewsRelevance:{tier:'A',label:'Direkt affärskritisk',themes:['Anläggning/kapacitet']}}).level,'insufficient','upstream labels are not evidence');
 assert.equal(buildNewsCardAnalysis({title:'Årsrapport',factualSummary:'Bolaget driver en stor anläggning.'}).level,'insufficient');
@@ -42,6 +45,8 @@ assert.equal(buildNewsCardAnalysis({title:'Årsrapport',factualSummary:'Bolaget 
 const profile=makeWatchProfile({industry:'waste',market:'Sverige',regions:['Örebro län','Värmlands län'],themes:['Teknik & innovation'],actors:['Ragn-Sells']});
 const news=(title:string,extra:Record<string,unknown>={})=>({title,url:'https://example.se/nyheter/'+encodeURIComponent(title),category:'Teknik & innovation',geographies:[],competitors:[],...extra});
 assert.equal(profileNewsMatch(news('Ny sorteringsteknik i Göteborg'),profile).matches,false);
+assert.equal(profileNewsMatch(news('Ohlssons utökar närvaron i Göteborg',{category:'Konkurrent',factualSummary:'Ohlssons får ett nytt uppdrag i Göteborg.',geographies:['Sverige','Värmland']}),profile).matches,false,'page boilerplate cannot supply a false regional match');
+assert.deepEqual(visibleNewsGeographies(news('Ohlssons utökar närvaron i Göteborg',{geographies:['Sverige','Värmland']})),['Göteborg']);
 assert.equal(profileNewsMatch(news('Ny sorteringsteknik i Karlstad'),profile).matches,true);
 assert.equal(profileNewsMatch(news('Ny sorteringsteknik i Karlstad',{factualSummary:'Från vår verksamhet i Göteborg.'}),profile).matches,true);
 assert.equal(profileNewsMatch(news('Nya priser i Örebro',{category:'Marknad'}),profile).matches,false);
