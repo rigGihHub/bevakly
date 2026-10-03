@@ -17,6 +17,18 @@ const GENERIC_TITLES=[
 ];
 const SUSPICIOUS_PATH=/(\/(category|kategori|tag|etikett|archive|arkiv|search|sok|nyheter|press|pressrum|nyhetsrum)\/?$)|([?&](page|paged|s|search)=)/i;
 
+// Shared by article validation and the final feed (including search results).
+export function nonNewsPageReason(input:{title:string;url:string;text?:string;allowInlineStory?:boolean}):string|null{
+  const title=input.title.replace(/\s*[-|–]\s*(?:Avfall Sverige|Göteborgs Stad).*$/i,'').trim();
+  let path='';try{path=new URL(input.url).pathname;}catch{return 'Ogiltig artikeladress';}
+  if(/(?:^|\/)tidningen-avfall-och-miljo(?:\/|$)/i.test(path)||/^tidningen\b/i.test(title)&&/avfall och miljö/i.test(title))return 'Presentationssida för en tidning, inte en nyhet';
+  if(/^(?:bli auktoriserad|de här samlar in|om oss|kontakta oss|våra tjänster|about us)\b/i.test(title))return 'Löpande informationssida, inte en daterad händelse';
+  if(/^(?:tidningen|magazine|journal)\b/i.test(title)&&/(?:utkommer|prenumerera|(?:är|is).{0,60}(?:tidning|magazine|journal))/i.test(input.text??'')&&!/\b(?:ny|nya|nytt|new|lanserar|publicerar)\b/i.test(title))return 'Löpande presentation av en publikation';
+  if(GENERIC_TITLES.some(rx=>rx.test(title)))return 'Kategori-, arkiv- eller startsida';
+  if(!input.allowInlineStory&&/\/(?:nyheter|news|press|pressrum|nyhetsrum|aktuellt|arkiv|archive|category|kategori|tag)\/?$/i.test(path))return 'Nyhetslista utan verifierad enskild artikel';
+  return null;
+}
+
 function tokens(s:string){
   return new Set(s.toLocaleLowerCase('sv-SE').replace(/[^a-zåäö0-9 ]/gi,' ').split(/\s+/).filter(x=>x.length>2));
 }
@@ -39,7 +51,8 @@ export function validateSourceArticle(input:{
   const title=(input.article.title||input.requestedTitle||'').trim();
   const body=input.article.textSample||input.article.description||'';
   const reasons:string[]=[];
-  const genericPage=GENERIC_TITLES.some(rx=>rx.test(title));
+  const pageReason=nonNewsPageReason({title,url:input.url,text:body,allowInlineStory:input.article.publicationBasis==='source-listing'});
+  const genericPage=Boolean(pageReason);
   const suspiciousUrl=SUSPICIOUS_PATH.test(input.url);
   const titleBodyOverlap=overlap(title,body);
   let dateMismatch=false;
@@ -62,11 +75,13 @@ export function validateSourceArticle(input:{
   score=Math.max(0,Math.min(100,Math.round(score)));
 
   const decision:ArticleValidationDecision=
+    pageReason?'reject':
     dateMismatch?'reject':
     genericPage&&suspiciousUrl?'reject':
     score<45?'reject':
     score<72?'thin':'valid';
 
+  if(pageReason)reasons.unshift(pageReason);
   if(decision==='valid')reasons.unshift('Rubrik, URL, datum och brödtext är tillräckligt konsistenta för artikelbehandling.');
   if(decision==='thin')reasons.unshift('Artikeln kan användas, men struktur eller innehåll är osäkert och ska viktas ned.');
 

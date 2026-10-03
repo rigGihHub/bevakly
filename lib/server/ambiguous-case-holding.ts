@@ -1,5 +1,5 @@
 import { databaseErrorMessage, ensureOrganization, getDatabase } from '@/lib/server/db';
-import type { AmbiguousCaseCandidate } from '@/lib/intelligence/ambiguous-case-holding';
+import type { AmbiguousCaseCandidate, AmbiguousEvidenceSnapshot } from '@/lib/intelligence/ambiguous-case-holding';
 
 import { toPersistentAmbiguousCandidate, type PersistentAmbiguousCandidate } from '@/lib/intelligence/ambiguous-case-persistence';
 

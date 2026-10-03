@@ -5,6 +5,8 @@ export type ArticleExtraction = {
   title: string;
   description: string;
   publishedAt: string | null;
+  modifiedAt?: string | null;
+  publicationBasis?: 'publication' | 'undated' | 'source-listing' | 'url';
   textSample: string;
   extractionMethod: ArticleExtractionMethod;
   extractedChars: number;
@@ -148,23 +150,28 @@ export function extractArticle(html: string, keywords: string[] = wasteKeywords)
   const jsonNodes=parseJsonLd(html); const jsonArticle=jsonLdArticle(jsonNodes);
   const title = meta(html, "og:title") || meta(html,'twitter:title') || clean(String(jsonArticle?.headline??'')) || firstMatch(html, [/<h1[^>]*>([\s\S]*?)<\/h1>/i, /<title[^>]*>([\s\S]*?)<\/title>/i]);
   const description = meta(html, "og:description") || meta(html,'twitter:description') || meta(html, "description") || clean(String(jsonArticle?.description??''));
-  const dateRaw = meta(html, "article:published_time") || meta(html, "date") || meta(html, "datePublished") || meta(html, "pubdate") || meta(html, "publish-date") || meta(html,"dc.date") || meta(html,"dcterms.date") || clean(String(jsonArticle?.datePublished??jsonArticle?.dateCreated??'')) || firstMatch(html, [
+  // Updated timestamps belong to page maintenance, not news publication.
+  const publicationHtml=html.replace(/<time\b[^>]*>[\s\S]*?<\/time>/gi,(tag,offset)=>{
+    const context=html.slice(Math.max(0,offset-150),offset);
+    const preceding=clean(context);
+    return /dateModified|modified|updated|uppdaterad/i.test(tag)||/<[^>]*(?:dateModified|last.?updated|last.?modified|uppdaterad)[^>]*>\s*$/i.test(context)||/(?:uppdaterad|updated)\s*[-:]?\s*$/i.test(preceding)?'':tag;
+  });
+  const dateRaw = meta(html, "article:published_time") || meta(html, "date") || meta(html, "datePublished") || meta(html, "pubdate") || meta(html, "publish-date") || meta(html,"dc.date") || meta(html,"dcterms.date") || clean(String(jsonArticle?.datePublished??'')) || firstMatch(publicationHtml, [
     /<time[^>]+datetime=["']([^"']+)["']/i,
     /<time\b[^>]*>([\s\S]*?)<\/time>/i,
     /<[^>]+class=["'][^"']*article__datepublished[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i,
     /"datePublished"\s*:\s*"([^"]+)"/i,
-    /"dateCreated"\s*:\s*"([^"]+)"/i,
-    /"uploadDate"\s*:\s*"([^"]+)"/i,
     /<p[^>]+class=["'][^"']*blog-post-full__date[^"']*["'][^>]*>([\s\S]*?)<\/p>/i,
-    /(?:publicerad|publicerat|published|publish date|uppdaterad|datum)\s*(?:den)?\s*:?\s*(\d{1,2}\s+(?:januari|jan\.?|februari|feb\.?|mars|mar\.?|april|apr\.?|maj|juni|jun\.?|juli|jul\.?|augusti|aug\.?|september|sep\.?|sept\.?|oktober|okt\.?|november|nov\.?|december|dec\.?)\s+20\d{2}(?:\s+(?:kl\s*)?\d{1,2}[:.]\d{2})?)/i,
-    /(?:publicerad|published|publish date|uppdaterad|datum)[^0-9]{0,30}(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)/i,
+    /(?:publicerad|publicerat|published|publish date)\s*(?:den)?\s*:?\s*(\d{1,2}\s+(?:januari|jan\.?|februari|feb\.?|mars|mar\.?|april|apr\.?|maj|juni|jun\.?|juli|jul\.?|augusti|aug\.?|september|sep\.?|sept\.?|oktober|okt\.?|november|nov\.?|december|dec\.?)\s+20\d{2}(?:\s+(?:kl\s*)?\d{1,2}[:.]\d{2})?)/i,
+    /(?:publicerad|published|publish date)[^0-9]{0,30}(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)/i,
   ]);
   const publishedAt=parsePublishedDate(dateRaw);
   const body=extractBody(html,keywords,jsonArticle);
   const metadataOnly=!body.text&&(description.length>=80);
   const textSample=body.text||(metadataOnly?description.slice(0,1600):'');
   const extractionMethod:ArticleExtractionMethod=body.method!=='none'?body.method:(metadataOnly?'metadata':'none');
-  return { title, description, publishedAt, textSample, extractionMethod, extractedChars:textSample.length };
+  const modifiedRaw=meta(html,'article:modified_time')||clean(String(jsonArticle?.dateModified??''))||firstMatch(html,[/(?:senast uppdaterad|last updated|uppdaterad)[^0-9]{0,30}(20\d{2}-\d{2}-\d{2})/i]);
+  return { title, description, publishedAt, modifiedAt:parsePublishedDate(modifiedRaw), publicationBasis:publishedAt?'publication':'undated', textSample, extractionMethod, extractedChars:textSample.length };
 }
 
 export function factualSummary(article: ArticleExtraction, fallbackTitle: string) {

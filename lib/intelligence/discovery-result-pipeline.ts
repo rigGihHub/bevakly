@@ -1,3 +1,4 @@
+import { nonNewsPageReason } from './source-article-validation';
 import { assessEarlySignal, type EarlySignalAssessment } from './early-signals';
 import { matchCompetitors, matchGeographies } from './entities';
 import { assessEvidenceQuality, type EvidenceQuality } from './evidence-quality';
@@ -133,6 +134,7 @@ export function processDiscoveryResult(
 
   let rejectionReason:string|null=null;
   if(!canonicalUrl)rejectionReason='Ogiltig URL';
+  else if(nonNewsPageReason({title,url:canonicalUrl,text:snippet}))rejectionReason=nonNewsPageReason({title,url:canonicalUrl,text:snippet});
   else if(title.length<8)rejectionReason='Rubriken är för kort för säker klassificering';
   else if(!date.ok)rejectionReason=date.reason;
   else if(known.has(canonicalUrl))rejectionReason='Finns redan i det kända flödet';

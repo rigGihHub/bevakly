@@ -16,7 +16,7 @@ export type BenchmarkExpectation={
 export type NewsBenchmarkFixture={
   id:string; category:string; title:string; text:string; url:string; source:string;
   sourceType:string; sourceTier:number; trustScore:number; publishedAt:string|null;
-  extractionMethod?:ArticleExtractionMethod; competitors?:string[]; geographies?:string[]; observedAt?:string;
+  publicationBasis?:ArticleExtraction['publicationBasis']; extractionMethod?:ArticleExtractionMethod; competitors?:string[]; geographies?:string[]; observedAt?:string;
   expected:BenchmarkExpectation;
 };
 export type BenchmarkFixtureResult={
@@ -27,7 +27,7 @@ export type BenchmarkFixtureResult={
 
 const TIER_RANK={D:0,C:1,B:2,A:3} as const;
 function articleOf(f:NewsBenchmarkFixture):ArticleExtraction{
-  return {title:f.title,description:f.text.slice(0,260),publishedAt:f.publishedAt,textSample:f.text,extractionMethod:f.extractionMethod??'article',extractedChars:f.text.length};
+  return {title:f.title,description:f.text.slice(0,260),publishedAt:f.publishedAt,publicationBasis:f.publicationBasis,textSample:f.text,extractionMethod:f.extractionMethod??'article',extractedChars:f.text.length};
 }
 export function evaluateNewsFixture(f:NewsBenchmarkFixture,now?:Date):BenchmarkFixtureResult{
   const evaluationNow=now??(f.observedAt?new Date(f.observedAt):new Date('2026-09-07T08:00:00Z'));

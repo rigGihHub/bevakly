@@ -17,8 +17,8 @@ assert.ok(workspace.keywords.includes('gmail'));
 
 const aiQueries=buildSpecialWatchDiscoveryQueue('ai-tools',new Date('2026-09-16T00:00:00Z'));
 const workspaceQueries=buildSpecialWatchDiscoveryQueue('google-workspace',new Date('2026-09-16T00:00:00Z'));
-assert.equal(aiQueries.length,8);
-assert.equal(workspaceQueries.length,7);
+assert.equal(aiQueries.length,10);
+assert.equal(workspaceQueries.length,9);
 assert.ok(aiQueries.some(query=>query.query.includes('ChatGPT')));
 assert.ok(workspaceQueries.some(query=>query.allowedHosts?.includes('workspaceupdates.googleblog.com')));
 

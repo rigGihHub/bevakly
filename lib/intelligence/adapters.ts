@@ -1,7 +1,7 @@
 import type { WatchSource } from "./sources";
 import { wasteDiscoveryKeywords } from "./sources";
 
-export type SourceCandidate = { title:string; url:string; publishedAtHint?:string };
+export type SourceCandidate = { title:string; url:string; publishedAtHint?:string; articleHtmlHint?:string };
 
 function clean(value:string){
   return value.replace(/<script[\s\S]*?<\/script>/gi," ")
@@ -69,7 +69,7 @@ export function extractSourceCandidates(html:string, source:WatchSource, keyword
     const date=fragment.match(/class=["'][^"']*post-date[^"']*["'][^>]*>\s*(20\d{2}-\d{2}-\d{2})\s*</i)?.[1];
     const title=clean(fragment.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i)?.[1]??'');
     if(date&&title.length>=18&&(source.type==='competitor'||relevant(title,activeKeywords))){
-      result.unshift({title,url:source.listingUrl,publishedAtHint:`${date}T12:00:00.000Z`});
+      result.unshift({title,url:source.listingUrl,publishedAtHint:`${date}T12:00:00.000Z`,articleHtmlHint:fragment});
     }
   }
   const unique=new Map<string,SourceCandidate>();
