@@ -1,6 +1,6 @@
 {
   "name": "bevakly",
-  "version": "3.43.1",
+  "version": "3.43.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -71,3 +71,4 @@
     "typescript": "^5.7.0"
   }
 }
+

@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { clearFeedSharedCache, fetchFeedShared, readFeedSnapshot } from '../lib/client/feed-cache';
+
+const values:Record<string,string>={};
+const storage=new Proxy(values,{get(target,key){
+ if(key==='getItem')return (k:string)=>target[k]??null;
+ if(key==='setItem')return (k:string,v:string)=>{target[k]=v};
+ if(key==='removeItem')return (k:string)=>{delete target[k]};
+ return target[key as string];
+}});
+Object.assign(globalThis,{window:{location:{origin:'https://bevakly.se'}},localStorage:storage});
+let calls=0;
+let release!:()=>void;
+const gate=new Promise<void>(r=>{release=r});
+const payload={fetchedAt:'2026-10-05T05:00:00Z',newsFeedItems:[{title:'Saved',url:'https://example.com/1'}],privateDiagnostics:'omit'};
+globalThis.fetch=async()=>{calls++;await gate;return new Response(JSON.stringify(payload))};
+const a=fetchFeedShared('/api/industry-feed?industry=waste&refresh=1');
+const b=fetchFeedShared('/api/industry-feed?refresh=2&industry=waste');
+assert.equal(calls,1,'Same profile shares the in-flight request');
+release();await Promise.all([a,b]);
+clearFeedSharedCache();
+assert.deepEqual(readFeedSnapshot('/api/industry-feed?industry=waste&refresh=3'),{fetchedAt:payload.fetchedAt,newsFeedItems:payload.newsFeedItems});
+assert.equal(readFeedSnapshot('/api/industry-feed?industry=waste&regions=Stockholm'),null,'Snapshots must not leak across profiles');
+const key=Object.keys(values)[0];
+values[key]=JSON.stringify({at:Date.now()-25*60*60*1000,payload});
+assert.equal(readFeedSnapshot('/api/industry-feed?industry=waste'),null,'Expired snapshot is rejected');
+values[key]='invalid json';
+assert.equal(readFeedSnapshot('/api/industry-feed?industry=waste'),null);
+globalThis.fetch=async()=>{throw new DOMException('Timed out','TimeoutError')};
+await assert.rejects(fetchFeedShared('/api/industry-feed?industry=waste'),/tog för lång tid/);
+globalThis.fetch=async()=>new Response(JSON.stringify(payload));
+await fetchFeedShared('/api/industry-feed?industry=waste');
+assert.ok(readFeedSnapshot('/api/industry-feed?industry=waste'),'Retry succeeds after timeout');
+console.log('Feed cache: sharing, snapshot restore, profile isolation, expiry, corrupt storage and timeout recovery PASS');

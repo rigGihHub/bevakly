@@ -7,7 +7,7 @@ import { selectProfileNews } from '@/lib/intelligence/profile-news-selection';
 import { competitorCoverageStatus, type CompetitorSourceCheck } from '@/lib/intelligence/competitor-coverage-status';
 import type { WatchProfile } from '@/lib/intelligence/watch-profiles';
 import { buildNewsCardAnalysis, type CardBidRelevance } from '@/lib/intelligence/news-card-analysis';
-import { fetchFeedShared } from '@/lib/client/feed-cache';
+import { fetchFeedShared, readFeedSnapshot } from '@/lib/client/feed-cache';
 import { assessRefreshPerformance } from '@/lib/intelligence/refresh-performance';
 import type { RefreshPerformance } from '@/lib/intelligence/refresh-performance';
 import type { RefreshHistorySummary } from '@/lib/intelligence/refresh-history';
@@ -61,7 +61,10 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
       if(customIndustry)qs.set('custom',customIndustry);
       if(profile.actors.length)qs.set('actors',profile.actors.join('|'));
       qs.set('market',profile.market);qs.set('regions',profile.regions.join('|'));qs.set('themes',profile.themes.join('|'));
-      const payload=await fetchFeedShared<Payload>(`/api/industry-feed?${qs}`);
+      const url=`/api/industry-feed?${qs}`;
+      const snapshot=readFeedSnapshot<Payload>(url);
+      if(snapshot)setData(snapshot);
+      const payload=await fetchFeedShared<Payload>(url);
       if(id!==requestId.current)return;
       setData(payload);
       window.dispatchEvent(new CustomEvent('bevakly:refresh-done',{detail:{fetchedAt:payload.fetchedAt}}));
@@ -116,7 +119,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
   };
 
   return <section id="industry-feed" className="newsFirstFeed" aria-busy={loading}>
-    {loading&&<div role="status" aria-live="polite" className="feedLoading"><strong>{data?'Uppdaterar nyheterna…':'Kontrollerar källor och artiklar…'}</strong><span>{elapsedSeconds} s{data?' · Tidigare resultat visas under hämtningen.':' · Resultatet visas när kontrollen är klar.'}</span></div>}
+    {loading&&<div role="status" aria-live="polite" className="feedLoading"><strong>{data?'Uppdaterar nyheterna…':'Hämtar nyheter för din bevakning…'}</strong><span>{elapsedSeconds} s · {elapsedSeconds>=45?'Hämtningen tar längre tid än normalt.':data?'Tidigare resultat visas under hämtningen.':'Källor och artiklar kontrolleras innan resultat visas.'}</span>{data?.fetchedAt&&<small>Visar sparat resultat från {fmtDate(data.fetchedAt)}.</small>}<small>Upp till cirka 45 sekunder är normalt för en full kontroll. Du kan byta mellan Branschen och Konkurrenterna under tiden.</small></div>}
     {error&&<div role="alert" className="feedError"><strong>Hämtningen misslyckades.</strong> {error}{data&&<p>Tidigare resultat visas. De har inte uppdaterats.</p>}<button className="linkButton" onClick={()=>void load()}>Försök igen</button></div>}
     {focus==='competitors'&&data&&<details className="competitorCoverage" open={items.length===0}><summary>Källstatus för dina {profile.actors.length} konkurrenter</summary><p>Avser direktkällor i senaste hämtningen. En nådd källsida innebär inte att alla nyheter har kontrollerats.</p><ul>{coverage.map(c=><li key={c.actor}><strong>{c.actor}</strong><span>{c.hits} relevanta träffar · {c.label}</span><small>{c.lastSuccessfulCheck?`Källsida senast nådd ${fmtDate(c.lastSuccessfulCheck)}`:'Ingen lyckad direktkontroll i denna hämtning'}</small>{c.sources.map(source=><small key={source.id}>{source.name}: {source.ok?'Källsida nådd':'Kunde inte nås'}{source.articleChecks?` · ${source.articleChecks} artikelförsök`:''}{source.articleFailures?` · ${source.articleFailures} läsfel`:''}</small>)}</li>)}</ul></details>}
 
@@ -125,6 +128,7 @@ export default function NewsFirstFeed({industry,customIndustry,profile,focus,day
         <div className="newsFeedTitle"><h3>{label}</h3><strong>{loading&&!data?"…":items.length}</strong>{unreadInView>0&&<span title="Inte tidigare markerad som läst i denna webbläsare" style={{fontSize:11,fontWeight:800,padding:'2px 6px',borderRadius:999,background:'#eef6ee'}}>+{unreadInView} nya</span>}</div>
         {unreadInView>0&&<button onClick={()=>markSeen(items.filter(item=>unseen.has(keyOf(item))).map(keyOf))} style={{border:0,background:'transparent',fontSize:11,fontWeight:700,cursor:'pointer',padding:4}}>Markera lästa</button>}
       </div>
+      {loading&&!data&&<div className="feedSkeleton" aria-hidden="true">{[0,1,2].map(n=><div key={n}><span/><span/><span/></div>)}</div>}
       {!loading&&!error&&items.length===0&&<p className="feedEmpty">{focus==='competitors'?(profile.actors.length?'Inga godkända nyheter för dina konkurrenter hittades i denna hämtning. Se källstatus ovan.':'Välj konkurrenter i din bevakning för att använda detta spår.'):`Inga nyheter matchar din bevakning under de senaste ${days} dagarna.`}</p>}
       {!!data?.profileSelection?.filteredOut&&<p className="feedScopeNote">{data.profileSelection.filteredOut} träffar utanför profilens marknad, områden eller teman har filtrerats bort.</p>}
       {items.length>0&&<div className="newsFeedList">{items.slice(0,visibleCount).map(item=>{

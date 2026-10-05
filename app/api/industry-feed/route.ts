@@ -122,9 +122,11 @@ export async function GET(req:NextRequest){
   const discoveryPipeline={ready:true,canonicalization:'enabled',qualityGate:'enabled',earlySignal:'enabled',entityMatching:'enabled',dedupe:'enabled',evidence:'enabled',providerConnected:discoveryProvider.providerConnected,canonicalUrlExample:canonicalizeDiscoveryUrl('https://example.com/a/?utm_source=test&b=2&a=1')};
   const enabledSources=profile.sources.filter(s=>s.enabled);
   const sourceDiversity=assessSourceDiversity(enabledSources);
-  const persistentSourceHealthLoad=await loadPersistentSourceHealth();
+  const [persistentSourceHealthLoad,preCrawlLearning]=await Promise.all([
+    loadPersistentSourceHealth(),
+    profile.id==='waste'?loadIntelligenceLearningSnapshot():Promise.resolve({enabled:false as const,sourceLearning:[],coverageSourceLearning:[],reason:'Coverage crawl budgeting används bara för avfallsprofilen.'}),
+  ]);
   const hydratedSourceHealth=hydrateAdaptiveSourceState(persistentSourceHealthLoad.rows);
-  const preCrawlLearning=profile.id==='waste'?await loadIntelligenceLearningSnapshot():{enabled:false as const,sourceLearning:[],coverageSourceLearning:[],reason:'Coverage crawl budgeting används bara för avfallsprofilen.'};
   const coverageCrawlHints=profile.id==='waste'?buildCoverageCrawlHints({sources:enabledSources,coverageHistory:preCrawlLearning.coverageSourceLearning,sourceLearning:preCrawlLearning.sourceLearning}):[];
   const adaptiveSourcePlan=buildAdaptiveSourcePlan(enabledSources,new Date(fetchedAt),coverageCrawlHints);
   const planBySource=new Map(adaptiveSourcePlan.map(x=>[x.source.id,x] as const));
